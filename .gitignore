@@ -61,3 +61,5 @@ temp/
 .yarn/install-state.gz
 EOF < /dev/null
 /generated/prisma
+.tsconfig.tsbuildinfo
+
