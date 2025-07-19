@@ -1,0 +1,310 @@
+"use client"
+
+import { useState } from "react"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Dialog } from "@/components/ui/dialog"
+import { trpc } from "@/lib/trpc"
+import { formatCurrency, formatPercentage, calculateBudgetProgress } from "@/lib/financial-utils"
+import { Plus, Edit2, Trash2, AlertTriangle, CheckCircle, Clock } from "lucide-react"
+import type { BudgetCategoryFormData } from "@/types/financial"
+
+const categoryColors = [
+  "#3B82F6", // Blue
+  "#EF4444", // Red  
+  "#10B981", // Green
+  "#F59E0B", // Amber
+  "#8B5CF6", // Purple
+  "#EC4899", // Pink
+  "#6B7280", // Gray
+  "#14B8A6", // Teal
+]
+
+interface AddCategoryDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  budgetId: string
+}
+
+function AddCategoryDialog({ open, onOpenChange, budgetId }: AddCategoryDialogProps) {
+  const defaultColor = categoryColors[0] || "#3B82F6"
+  const [formData, setFormData] = useState<BudgetCategoryFormData>({
+    name: "",
+    allocatedAmount: 0,
+    color: defaultColor
+  })
+
+  const utils = trpc.useUtils()
+  const createCategory = trpc.budgetCategory.create.useMutation({
+    onSuccess: () => {
+      utils.budget.getCurrent.invalidate()
+      onOpenChange(false)
+      setFormData({ name: "", allocatedAmount: 0, color: defaultColor })
+    }
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    createCategory.mutate({
+      name: formData.name,
+      allocatedAmount: formData.allocatedAmount,
+      color: formData.color || defaultColor,
+      budgetId
+    })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+          <h3 className="text-lg font-semibold mb-4">Add Budget Category</h3>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Category Name</label>
+              <Input
+                placeholder="e.g., Housing, Food, Transportation"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Allocated Amount</label>
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.allocatedAmount || ""}
+                onChange={(e) => setFormData({ ...formData, allocatedAmount: parseFloat(e.target.value) || 0 })}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Color</label>
+              <div className="flex space-x-2">
+                {categoryColors.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`w-8 h-8 rounded-full border-2 ${
+                      formData.color === color ? 'border-gray-400' : 'border-gray-200'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setFormData({ ...formData, color: color })}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createCategory.isPending}>
+                {createCategory.isPending ? "Adding..." : "Add Category"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Dialog>
+  )
+}
+
+interface CategoryCardProps {
+  category: any
+  budgetEndDate: Date
+}
+
+function CategoryCard({ category, budgetEndDate }: CategoryCardProps) {
+  const allocated = parseFloat(category.allocatedAmount.toString())
+  const spent = parseFloat(category.spentAmount.toString())
+  const remaining = allocated - spent
+  const progress = calculateBudgetProgress(spent, allocated)
+  const isOverBudget = spent > allocated
+
+  const utils = trpc.useUtils()
+  const deleteCategory = trpc.budgetCategory.delete.useMutation({
+    onSuccess: () => {
+      utils.budget.getCurrent.invalidate()
+    }
+  })
+
+  const daysRemaining = Math.max(0, Math.ceil((budgetEndDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+  
+  const getStatusIcon = () => {
+    if (isOverBudget) {
+      return <AlertTriangle className="h-4 w-4 text-red-600" />
+    } else if (progress > 80) {
+      return <Clock className="h-4 w-4 text-orange-600" />
+    } else {
+      return <CheckCircle className="h-4 w-4 text-green-600" />
+    }
+  }
+
+  const getStatusText = () => {
+    if (isOverBudget) {
+      return "Over budget"
+    } else if (progress > 80) {
+      return "Nearly depleted"
+    } else {
+      return "On track"
+    }
+  }
+
+  const getStatusColor = () => {
+    if (isOverBudget) {
+      return "text-red-600"
+    } else if (progress > 80) {
+      return "text-orange-600"
+    } else {
+      return "text-green-600"
+    }
+  }
+
+  return (
+    <Card className="p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center space-x-2">
+          <div 
+            className="w-3 h-3 rounded-full"
+            style={{ backgroundColor: category.color }}
+          />
+          <h3 className="font-medium text-gray-900">{category.name}</h3>
+        </div>
+        <div className="flex items-center space-x-1">
+          <Button variant="ghost" size="sm">
+            <Edit2 className="h-3 w-3" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => deleteCategory.mutate({ id: category.id })}
+            disabled={deleteCategory.isPending}
+          >
+            <Trash2 className="h-3 w-3 text-red-500" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-2 mb-3">
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">Spent</span>
+          <span className={isOverBudget ? "text-red-600 font-medium" : "text-gray-900"}>
+            {formatCurrency(spent)}
+          </span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">Budget</span>
+          <span className="text-gray-900">{formatCurrency(allocated)}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">Remaining</span>
+          <span className={remaining >= 0 ? "text-green-600" : "text-red-600"}>
+            {formatCurrency(remaining)}
+          </span>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="mb-3">
+        <div className="flex justify-between text-xs mb-1">
+          <span className="text-gray-500">Progress</span>
+          <span className={isOverBudget ? "text-red-600" : "text-gray-700"}>
+            {formatPercentage(Math.min(progress, 100))}
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div 
+            className={`h-2 rounded-full transition-all duration-300 ${
+              isOverBudget ? 'bg-red-500' : 
+              progress > 80 ? 'bg-orange-500' : 
+              'bg-green-500'
+            }`}
+            style={{ width: `${Math.min(progress, 100)}%` }}
+          />
+          {isOverBudget && progress > 100 && (
+            <div 
+              className="h-2 bg-red-600 rounded-full mt-1"
+              style={{ width: `${Math.min(progress - 100, 50)}%` }}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Status */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          {getStatusIcon()}
+          <span className={`text-xs font-medium ${getStatusColor()}`}>
+            {getStatusText()}
+          </span>
+        </div>
+        <span className="text-xs text-gray-500">
+          {daysRemaining} days left
+        </span>
+      </div>
+    </Card>
+  )
+}
+
+interface BudgetCategoriesProps {
+  currentBudget: any
+}
+
+export default function BudgetCategories({ currentBudget }: BudgetCategoriesProps) {
+  const [showAddDialog, setShowAddDialog] = useState(false)
+
+  if (!currentBudget) {
+    return null
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-900">Budget Categories</h2>
+        <Button onClick={() => setShowAddDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Category
+        </Button>
+      </div>
+
+      {currentBudget.categories.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {currentBudget.categories.map((category: any) => (
+            <CategoryCard 
+              key={category.id} 
+              category={category} 
+              budgetEndDate={currentBudget.endDate}
+            />
+          ))}
+        </div>
+      ) : (
+        <Card className="p-8 text-center">
+          <div className="max-w-sm mx-auto">
+            <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Plus className="h-8 w-8 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No categories yet</h3>
+            <p className="text-gray-600 mb-4">
+              Add budget categories to start tracking your spending across different areas.
+            </p>
+            <Button onClick={() => setShowAddDialog(true)}>
+              Add First Category
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      <AddCategoryDialog 
+        open={showAddDialog} 
+        onOpenChange={setShowAddDialog}
+        budgetId={currentBudget.id}
+      />
+    </div>
+  )
+}
