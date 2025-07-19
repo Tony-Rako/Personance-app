@@ -1,28 +1,27 @@
-"use client"
+'use client'
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { signOut, useSession } from "next-auth/react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { 
-  LayoutDashboard, 
-  PiggyBank, 
-  TrendingUp, 
-  Settings, 
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { signOut, useSession } from 'next-auth/react'
+import { Button } from '@/components/ui/button'
+import {
+  LayoutDashboard,
+  PiggyBank,
+  TrendingUp,
+  Settings,
   LogOut,
   Bell,
   User,
-  Target
-} from "lucide-react"
-import { cn } from "@/lib/utils"
+  Target,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Wealth Building", href: "/dashboard/wealth-building", icon: Target },
-  { name: "Budgeting", href: "/dashboard/budgeting", icon: PiggyBank },
-  { name: "Wealth Tracking", href: "/dashboard/wealth", icon: TrendingUp },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Wealth Building', href: '/dashboard/wealth-building', icon: Target },
+  { name: 'Budgeting', href: '/dashboard/budgeting', icon: PiggyBank },
+  { name: 'Wealth Tracking', href: '/dashboard/wealth', icon: TrendingUp },
+  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ]
 
 export default function DashboardNav() {
@@ -41,17 +40,17 @@ export default function DashboardNav() {
 
       {/* Navigation */}
       <nav className="flex items-center space-x-1">
-        {navigation.map((item) => {
+        {navigation.map(item => {
           const isActive = pathname === item.href
           return (
             <Link
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center space-x-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                'flex items-center space-x-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 isActive
-                  ? "bg-blue-100 text-blue-700"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               )}
             >
               <item.icon className="h-4 w-4" />
@@ -67,7 +66,7 @@ export default function DashboardNav() {
           <Bell className="h-4 w-4" />
           <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500"></span>
         </Button>
-        
+
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
@@ -78,11 +77,11 @@ export default function DashboardNav() {
               <p className="text-gray-500">{session?.user?.email}</p>
             </div>
           </div>
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => signOut({ callbackUrl: "/" })}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => signOut({ callbackUrl: '/' })}
             className="text-gray-600 hover:text-gray-900"
           >
             <LogOut className="h-4 w-4" />

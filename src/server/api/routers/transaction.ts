@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '@/server/trpc'
-import { TransactionType } from '@prisma/client'
+import { TransactionType, type Transaction } from '@prisma/client'
 
 export const transactionRouter = createTRPCRouter({
   getAll: protectedProcedure
@@ -16,11 +16,19 @@ export const transactionRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const { limit, cursor, category, type, startDate, endDate } = input
-      
-      const where: any = {
+
+      const where: {
+        userId: string
+        category?: string
+        type?: TransactionType
+        date?: {
+          gte?: Date
+          lte?: Date
+        }
+      } = {
         userId: ctx.session.user.id,
       }
-      
+
       if (category) where.category = category
       if (type) where.type = type
       if (startDate || endDate) {
@@ -29,24 +37,30 @@ export const transactionRouter = createTRPCRouter({
         if (endDate) where.date.lte = endDate
       }
 
-      const findManyOptions: any = {
+      const findManyOptions: {
+        where: typeof where
+        take: number
+        orderBy: { date: 'desc' }
+        cursor?: { id: string }
+      } = {
         where,
         take: limit + 1,
         orderBy: {
           date: 'desc',
         },
       }
-      
+
       if (cursor) {
         findManyOptions.cursor = { id: cursor }
       }
 
-      const transactions = await ctx.prisma.transaction.findMany(findManyOptions)
+      const transactions =
+        await ctx.prisma.transaction.findMany(findManyOptions)
 
       let nextCursor: typeof cursor | undefined = undefined
       if (transactions.length > limit) {
         const nextItem = transactions.pop()
-        nextCursor = nextItem!.id
+        nextCursor = nextItem?.id
       }
 
       return {
@@ -82,11 +96,12 @@ export const transactionRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const createData: any = {
+      const createData = {
         ...input,
         userId: ctx.session.user.id,
+        accountName: input.accountName || null,
       }
-      
+
       const transaction = await ctx.prisma.transaction.create({
         data: createData,
       })
@@ -142,15 +157,25 @@ export const transactionRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input
-      const updateData: any = {}
+      const updateData: {
+        amount?: number
+        description?: string
+        category?: string
+        type?: TransactionType
+        date?: Date
+        accountName?: string
+        tags?: string[]
+      } = {}
       if (data.amount !== undefined) updateData.amount = data.amount
-      if (data.description !== undefined) updateData.description = data.description
+      if (data.description !== undefined)
+        updateData.description = data.description
       if (data.category !== undefined) updateData.category = data.category
       if (data.type !== undefined) updateData.type = data.type
       if (data.date !== undefined) updateData.date = data.date
-      if (data.accountName !== undefined) updateData.accountName = data.accountName
+      if (data.accountName !== undefined)
+        updateData.accountName = data.accountName
       if (data.tags !== undefined) updateData.tags = data.tags
-      
+
       return ctx.prisma.transaction.update({
         where: { id, userId: ctx.session.user.id },
         data: updateData,
@@ -224,7 +249,14 @@ export const transactionRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const where: any = {
+      const where: {
+        userId: string
+        type: TransactionType
+        date?: {
+          gte?: Date
+          lte?: Date
+        }
+      } = {
         userId: ctx.session.user.id,
         type: TransactionType.EXPENSE,
       }
@@ -239,16 +271,19 @@ export const transactionRouter = createTRPCRouter({
         where,
       })
 
-      const categorySpending = transactions.reduce((acc: Record<string, number>, transaction) => {
-        const category = transaction.category
-        const amount = parseFloat(transaction.amount.toString())
-        
-        if (!acc[category]) {
-          acc[category] = 0
-        }
-        acc[category] += amount
-        return acc
-      }, {})
+      const categorySpending = transactions.reduce(
+        (acc: Record<string, number>, transaction: Transaction) => {
+          const category = transaction.category
+          const amount = parseFloat(transaction.amount.toString())
+
+          if (!acc[category]) {
+            acc[category] = 0
+          }
+          acc[category] += amount
+          return acc
+        },
+        {}
+      )
 
       return Object.entries(categorySpending).map(([category, amount]) => ({
         category,
@@ -278,9 +313,9 @@ export const transactionRouter = createTRPCRouter({
         tags: [],
         accountName: t.accountName || null,
       }))
-      
+
       const results = await ctx.prisma.transaction.createMany({
-        data: createManyData as any,
+        data: createManyData,
       })
 
       return results

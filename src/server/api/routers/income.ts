@@ -18,7 +18,9 @@ export const incomeRouter = createTRPCRouter({
       z.object({
         source: z.string().min(1),
         amount: z.number().positive(),
-        frequency: z.enum(['monthly', 'yearly', 'weekly', 'bi-weekly']).default('monthly'),
+        frequency: z
+          .enum(['monthly', 'yearly', 'weekly', 'bi-weekly'])
+          .default('monthly'),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -36,18 +38,25 @@ export const incomeRouter = createTRPCRouter({
         id: z.string(),
         source: z.string().min(1).optional(),
         amount: z.number().positive().optional(),
-        frequency: z.enum(['monthly', 'yearly', 'weekly', 'bi-weekly']).optional(),
+        frequency: z
+          .enum(['monthly', 'yearly', 'weekly', 'bi-weekly'])
+          .optional(),
         isActive: z.boolean().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input
-      const updateData: any = {}
+      const updateData: {
+        source?: string
+        amount?: number
+        frequency?: 'monthly' | 'yearly' | 'weekly' | 'bi-weekly'
+        isActive?: boolean
+      } = {}
       if (data.source !== undefined) updateData.source = data.source
       if (data.amount !== undefined) updateData.amount = data.amount
       if (data.frequency !== undefined) updateData.frequency = data.frequency
       if (data.isActive !== undefined) updateData.isActive = data.isActive
-      
+
       return ctx.prisma.income.update({
         where: { id, userId: ctx.session.user.id },
         data: updateData,

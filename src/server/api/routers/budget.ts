@@ -60,12 +60,18 @@ export const budgetRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input
-      const updateData: any = {}
+      const updateData: {
+        name?: string
+        totalAmount?: number
+        startDate?: Date
+        endDate?: Date
+      } = {}
       if (data.name !== undefined) updateData.name = data.name
-      if (data.totalAmount !== undefined) updateData.totalAmount = data.totalAmount
+      if (data.totalAmount !== undefined)
+        updateData.totalAmount = data.totalAmount
       if (data.startDate !== undefined) updateData.startDate = data.startDate
       if (data.endDate !== undefined) updateData.endDate = data.endDate
-      
+
       return ctx.prisma.budget.update({
         where: { id, userId: ctx.session.user.id },
         data: updateData,
@@ -127,12 +133,19 @@ export const budgetCategoryRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input
-      const updateData: any = {}
+      const updateData: {
+        name?: string
+        allocatedAmount?: number
+        spentAmount?: number
+        color?: string
+      } = {}
       if (data.name !== undefined) updateData.name = data.name
-      if (data.allocatedAmount !== undefined) updateData.allocatedAmount = data.allocatedAmount
-      if (data.spentAmount !== undefined) updateData.spentAmount = data.spentAmount
+      if (data.allocatedAmount !== undefined)
+        updateData.allocatedAmount = data.allocatedAmount
+      if (data.spentAmount !== undefined)
+        updateData.spentAmount = data.spentAmount
       if (data.color !== undefined) updateData.color = data.color
-      
+
       return ctx.prisma.budgetCategory.update({
         where: { id, userId: ctx.session.user.id },
         data: updateData,

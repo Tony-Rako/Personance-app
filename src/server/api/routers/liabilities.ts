@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '@/server/trpc'
+import type { Liability } from '@prisma/client'
 
 export const liabilityRouter = createTRPCRouter({
   getAll: protectedProcedure.query(async ({ ctx }) => {
@@ -25,16 +26,26 @@ export const liabilityRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const data: any = {
+      const data: {
+        name: string
+        type: string
+        balance: number
+        userId: string
+        interestRate?: number
+        minimumPayment?: number
+        dueDate?: Date
+      } = {
         name: input.name,
         type: input.type,
         balance: input.balance,
         userId: ctx.session.user.id,
       }
-      if (input.interestRate !== undefined) data.interestRate = input.interestRate
-      if (input.minimumPayment !== undefined) data.minimumPayment = input.minimumPayment
+      if (input.interestRate !== undefined)
+        data.interestRate = input.interestRate
+      if (input.minimumPayment !== undefined)
+        data.minimumPayment = input.minimumPayment
       if (input.dueDate !== undefined) data.dueDate = input.dueDate
-      
+
       return ctx.prisma.liability.create({
         data,
       })
@@ -54,14 +65,23 @@ export const liabilityRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input
-      const updateData: any = {}
+      const updateData: {
+        name?: string
+        type?: string
+        balance?: number
+        interestRate?: number
+        minimumPayment?: number
+        dueDate?: Date
+      } = {}
       if (data.name !== undefined) updateData.name = data.name
       if (data.type !== undefined) updateData.type = data.type
       if (data.balance !== undefined) updateData.balance = data.balance
-      if (data.interestRate !== undefined) updateData.interestRate = data.interestRate
-      if (data.minimumPayment !== undefined) updateData.minimumPayment = data.minimumPayment
+      if (data.interestRate !== undefined)
+        updateData.interestRate = data.interestRate
+      if (data.minimumPayment !== undefined)
+        updateData.minimumPayment = data.minimumPayment
       if (data.dueDate !== undefined) updateData.dueDate = data.dueDate
-      
+
       return ctx.prisma.liability.update({
         where: { id, userId: ctx.session.user.id },
         data: updateData,
@@ -83,7 +103,7 @@ export const liabilityRouter = createTRPCRouter({
       },
     })
 
-    return liabilities.reduce((total: number, liability: any) => {
+    return liabilities.reduce((total: number, liability: Liability) => {
       return total + parseFloat(liability.balance.toString())
     }, 0)
   }),
@@ -95,18 +115,30 @@ export const liabilityRouter = createTRPCRouter({
       },
     })
 
-    const liabilitiesByType = liabilities.reduce((acc: Record<string, { totalBalance: number; count: number; liabilities: any[] }>, liability: any) => {
-      const type = liability.type
-      const balance = parseFloat(liability.balance.toString())
-      
-      if (!acc[type]) {
-        acc[type] = { totalBalance: 0, count: 0, liabilities: [] }
-      }
-      acc[type].totalBalance += balance
-      acc[type].count += 1
-      acc[type].liabilities.push(liability)
-      return acc
-    }, {} as Record<string, { totalBalance: number; count: number; liabilities: any[] }>)
+    const liabilitiesByType = liabilities.reduce(
+      (
+        acc: Record<
+          string,
+          { totalBalance: number; count: number; liabilities: Liability[] }
+        >,
+        liability: Liability
+      ) => {
+        const type = liability.type
+        const balance = parseFloat(liability.balance.toString())
+
+        if (!acc[type]) {
+          acc[type] = { totalBalance: 0, count: 0, liabilities: [] }
+        }
+        acc[type].totalBalance += balance
+        acc[type].count += 1
+        acc[type].liabilities.push(liability)
+        return acc
+      },
+      {} as Record<
+        string,
+        { totalBalance: number; count: number; liabilities: Liability[] }
+      >
+    )
 
     return liabilitiesByType
   }),
@@ -136,7 +168,8 @@ export const liabilityRouter = createTRPCRouter({
       }
 
       const monthsToPayoff = Math.ceil(
-        -Math.log(1 - (balance * monthlyRate) / monthlyPayment) / Math.log(1 + monthlyRate)
+        -Math.log(1 - (balance * monthlyRate) / monthlyPayment) /
+          Math.log(1 + monthlyRate)
       )
 
       const totalPayments = monthsToPayoff * monthlyPayment

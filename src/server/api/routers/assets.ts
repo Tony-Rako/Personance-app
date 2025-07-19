@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '@/server/trpc'
-import { AssetType } from '@prisma/client'
+import { AssetType, type Asset } from '@prisma/client'
 
 export const assetRouter = createTRPCRouter({
   getAll: protectedProcedure.query(async ({ ctx }) => {
@@ -21,18 +21,24 @@ export const assetRouter = createTRPCRouter({
       },
     })
 
-    const assetsByType = assets.reduce((acc, asset) => {
-      const type = asset.type
-      const value = parseFloat(asset.value.toString())
-      
-      if (!acc[type]) {
-        acc[type] = { totalValue: 0, count: 0, assets: [] }
-      }
-      acc[type].totalValue += value
-      acc[type].count += 1
-      acc[type].assets.push(asset)
-      return acc
-    }, {} as Record<AssetType, { totalValue: number; count: number; assets: any[] }>)
+    const assetsByType = assets.reduce(
+      (acc, asset) => {
+        const type = asset.type
+        const value = parseFloat(asset.value.toString())
+
+        if (!acc[type]) {
+          acc[type] = { totalValue: 0, count: 0, assets: [] }
+        }
+        acc[type].totalValue += value
+        acc[type].count += 1
+        acc[type].assets.push(asset)
+        return acc
+      },
+      {} as Record<
+        AssetType,
+        { totalValue: number; count: number; assets: Asset[] }
+      >
+    )
 
     return assetsByType
   }),
@@ -48,7 +54,14 @@ export const assetRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const data: any = {
+      const data: {
+        name: string
+        type: AssetType
+        value: number
+        userId: string
+        costBasis?: number
+        growth?: number
+      } = {
         name: input.name,
         type: input.type,
         value: input.value,
@@ -56,7 +69,7 @@ export const assetRouter = createTRPCRouter({
       }
       if (input.costBasis !== undefined) data.costBasis = input.costBasis
       if (input.growth !== undefined) data.growth = input.growth
-      
+
       return ctx.prisma.asset.create({
         data,
       })
@@ -75,13 +88,20 @@ export const assetRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input
-      const updateData: any = { lastUpdated: new Date() }
+      const updateData: {
+        lastUpdated: Date
+        name?: string
+        type?: AssetType
+        value?: number
+        costBasis?: number
+        growth?: number
+      } = { lastUpdated: new Date() }
       if (data.name !== undefined) updateData.name = data.name
       if (data.type !== undefined) updateData.type = data.type
       if (data.value !== undefined) updateData.value = data.value
       if (data.costBasis !== undefined) updateData.costBasis = data.costBasis
       if (data.growth !== undefined) updateData.growth = data.growth
-      
+
       return ctx.prisma.asset.update({
         where: { id, userId: ctx.session.user.id },
         data: updateData,
@@ -115,19 +135,27 @@ export const assetRouter = createTRPCRouter({
       },
     })
 
-    const totalValue = assets.reduce((sum, asset) => sum + parseFloat(asset.value.toString()), 0)
-    
-    const allocation = Object.values(AssetType).map(type => {
-      const typeAssets = assets.filter(asset => asset.type === type)
-      const typeValue = typeAssets.reduce((sum, asset) => sum + parseFloat(asset.value.toString()), 0)
-      
-      return {
-        type,
-        value: typeValue,
-        percentage: totalValue > 0 ? (typeValue / totalValue) * 100 : 0,
-        count: typeAssets.length,
-      }
-    }).filter(item => item.value > 0)
+    const totalValue = assets.reduce(
+      (sum, asset) => sum + parseFloat(asset.value.toString()),
+      0
+    )
+
+    const allocation = Object.values(AssetType)
+      .map(type => {
+        const typeAssets = assets.filter(asset => asset.type === type)
+        const typeValue = typeAssets.reduce(
+          (sum, asset) => sum + parseFloat(asset.value.toString()),
+          0
+        )
+
+        return {
+          type,
+          value: typeValue,
+          percentage: totalValue > 0 ? (typeValue / totalValue) * 100 : 0,
+          count: typeAssets.length,
+        }
+      })
+      .filter(item => item.value > 0)
 
     return { allocation, totalValue }
   }),

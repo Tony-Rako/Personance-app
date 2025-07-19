@@ -1,23 +1,31 @@
 import { useMemo } from 'react'
 import { trpc } from '@/lib/trpc'
-import { 
-  calculateNetWorth, 
+import {
+  calculateNetWorth,
   calculateCashFlow,
   formatCurrency,
-  calculateInvestmentReturn
 } from '@/lib/financial-utils'
 import type { FinancialSummary, BudgetSummary } from '@/types/financial'
 
 export const useFinancialSummary = () => {
-  const { data: incomes, isLoading: incomesLoading } = trpc.income.getAll.useQuery()
-  const { data: expenses, isLoading: expensesLoading } = trpc.expense.getAll.useQuery()
-  const { data: totalAssets, isLoading: assetsLoading } = trpc.asset.getTotalValue.useQuery()
-  const { data: totalLiabilities, isLoading: liabilitiesLoading } = trpc.liability.getTotalBalance.useQuery()
-  const { data: monthlyIncome, isLoading: monthlyIncomeLoading } = trpc.income.getTotalMonthly.useQuery()
-  const { data: monthlyExpenses, isLoading: monthlyExpensesLoading } = trpc.expense.getTotalMonthly.useQuery()
+  const { isLoading: incomesLoading } = trpc.income.getAll.useQuery()
+  const { isLoading: expensesLoading } = trpc.expense.getAll.useQuery()
+  const { data: totalAssets, isLoading: assetsLoading } =
+    trpc.asset.getTotalValue.useQuery()
+  const { data: totalLiabilities, isLoading: liabilitiesLoading } =
+    trpc.liability.getTotalBalance.useQuery()
+  const { data: monthlyIncome, isLoading: monthlyIncomeLoading } =
+    trpc.income.getTotalMonthly.useQuery()
+  const { data: monthlyExpenses, isLoading: monthlyExpensesLoading } =
+    trpc.expense.getTotalMonthly.useQuery()
 
-  const isLoading = incomesLoading || expensesLoading || assetsLoading || 
-                   liabilitiesLoading || monthlyIncomeLoading || monthlyExpensesLoading
+  const isLoading =
+    incomesLoading ||
+    expensesLoading ||
+    assetsLoading ||
+    liabilitiesLoading ||
+    monthlyIncomeLoading ||
+    monthlyExpensesLoading
 
   const summary: FinancialSummary = useMemo(() => {
     if (isLoading) {
@@ -37,16 +45,17 @@ export const useFinancialSummary = () => {
     const totalExpensesValue = monthlyExpenses || 0
     const totalAssetsValue = totalAssets || 0
     const totalLiabilitiesValue = totalLiabilities || 0
-    
+
     const netWorth = calculateNetWorth(totalAssetsValue, totalLiabilitiesValue)
     const cashFlow = calculateCashFlow(totalIncomeValue, totalExpensesValue)
-    
+
     // Mock monthly change calculation (in real app, you'd track this over time)
     const mockPreviousNetWorth = netWorth * 0.98 // Assume 2% growth
     const monthlyChange = netWorth - mockPreviousNetWorth
-    const monthlyChangePercentage = mockPreviousNetWorth > 0 
-      ? (monthlyChange / mockPreviousNetWorth) * 100 
-      : 0
+    const monthlyChangePercentage =
+      mockPreviousNetWorth > 0
+        ? (monthlyChange / mockPreviousNetWorth) * 100
+        : 0
 
     return {
       totalIncome: totalIncomeValue,
@@ -58,13 +67,7 @@ export const useFinancialSummary = () => {
       monthlyChange,
       monthlyChangePercentage,
     }
-  }, [
-    monthlyIncome,
-    monthlyExpenses,
-    totalAssets,
-    totalLiabilities,
-    isLoading
-  ])
+  }, [monthlyIncome, monthlyExpenses, totalAssets, totalLiabilities, isLoading])
 
   return {
     summary,
@@ -77,7 +80,7 @@ export const useFinancialSummary = () => {
       totalLiabilities: formatCurrency(summary.totalLiabilities),
       netWorth: formatCurrency(summary.netWorth, { showSign: true }),
       monthlyChange: formatCurrency(summary.monthlyChange, { showSign: true }),
-    }
+    },
   }
 }
 
@@ -102,7 +105,8 @@ export const useBudgetSummary = () => {
     }, 0)
 
     const remaining = totalBudgeted - totalSpent
-    const progressPercentage = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0
+    const progressPercentage =
+      totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0
 
     const categoriesOverBudget = currentBudget.categories.filter(category => {
       const allocated = parseFloat(category.allocatedAmount.toString())
@@ -110,7 +114,8 @@ export const useBudgetSummary = () => {
       return spent > allocated
     }).length
 
-    const categoriesOnTrack = currentBudget.categories.length - categoriesOverBudget
+    const categoriesOnTrack =
+      currentBudget.categories.length - categoriesOverBudget
 
     return {
       totalBudgeted,
@@ -130,6 +135,6 @@ export const useBudgetSummary = () => {
       totalBudgeted: formatCurrency(summary.totalBudgeted),
       totalSpent: formatCurrency(summary.totalSpent),
       remaining: formatCurrency(summary.remaining),
-    }
+    },
   }
 }

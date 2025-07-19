@@ -32,9 +32,7 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
       data: {
         ...shape.data,
         zodError:
-          error.cause instanceof ZodError
-            ? error.cause.flatten()
-            : null,
+          error.cause instanceof ZodError ? error.cause.flatten() : null,
       },
     }
   },
@@ -50,12 +48,12 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
   }
   return next({
     ctx: {
-      session: { 
-        ...ctx.session, 
-        user: { 
-          ...ctx.session.user, 
-          id: (ctx.session.user as any).id 
-        } 
+      session: {
+        ...ctx.session,
+        user: {
+          ...ctx.session.user,
+          id: (ctx.session.user as { id: string }).id,
+        },
       },
     },
   })

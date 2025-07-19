@@ -18,7 +18,9 @@ export const expenseRouter = createTRPCRouter({
       z.object({
         category: z.string().min(1),
         amount: z.number().positive(),
-        frequency: z.enum(['monthly', 'yearly', 'weekly', 'bi-weekly']).default('monthly'),
+        frequency: z
+          .enum(['monthly', 'yearly', 'weekly', 'bi-weekly'])
+          .default('monthly'),
         isRecurring: z.boolean().default(true),
       })
     )
@@ -37,18 +39,26 @@ export const expenseRouter = createTRPCRouter({
         id: z.string(),
         category: z.string().min(1).optional(),
         amount: z.number().positive().optional(),
-        frequency: z.enum(['monthly', 'yearly', 'weekly', 'bi-weekly']).optional(),
+        frequency: z
+          .enum(['monthly', 'yearly', 'weekly', 'bi-weekly'])
+          .optional(),
         isRecurring: z.boolean().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input
-      const updateData: any = {}
+      const updateData: {
+        category?: string
+        amount?: number
+        frequency?: 'monthly' | 'yearly' | 'weekly' | 'bi-weekly'
+        isRecurring?: boolean
+      } = {}
       if (data.category !== undefined) updateData.category = data.category
       if (data.amount !== undefined) updateData.amount = data.amount
       if (data.frequency !== undefined) updateData.frequency = data.frequency
-      if (data.isRecurring !== undefined) updateData.isRecurring = data.isRecurring
-      
+      if (data.isRecurring !== undefined)
+        updateData.isRecurring = data.isRecurring
+
       return ctx.prisma.expense.update({
         where: { id, userId: ctx.session.user.id },
         data: updateData,
@@ -93,16 +103,19 @@ export const expenseRouter = createTRPCRouter({
       },
     })
 
-    const categories = expenses.reduce((acc, expense) => {
-      const category = expense.category
-      const amount = parseFloat(expense.amount.toString())
-      
-      if (!acc[category]) {
-        acc[category] = 0
-      }
-      acc[category] += amount
-      return acc
-    }, {} as Record<string, number>)
+    const categories = expenses.reduce(
+      (acc, expense) => {
+        const category = expense.category
+        const amount = parseFloat(expense.amount.toString())
+
+        if (!acc[category]) {
+          acc[category] = 0
+        }
+        acc[category] += amount
+        return acc
+      },
+      {} as Record<string, number>
+    )
 
     return Object.entries(categories).map(([category, amount]) => ({
       category,

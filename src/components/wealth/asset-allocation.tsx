@@ -1,49 +1,56 @@
-"use client"
+'use client'
 
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { trpc } from "@/lib/trpc"
-import { formatCurrency, formatPercentage } from "@/lib/financial-utils"
-import { Building, TrendingUp, Coins, Briefcase, Home, Plus } from "lucide-react"
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { trpc } from '@/lib/trpc'
+import { formatCurrency, formatPercentage } from '@/lib/financial-utils'
+import {
+  Building,
+  TrendingUp,
+  Coins,
+  Briefcase,
+  Home,
+  Plus,
+} from 'lucide-react'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 
 const ASSET_TYPE_CONFIG = {
   REAL_ESTATE: {
-    label: "Real Estate",
+    label: 'Real Estate',
     icon: <Home className="h-5 w-5" />,
-    color: "#3B82F6",
-    description: "Primary residence and investment properties"
+    color: '#3B82F6',
+    description: 'Primary residence and investment properties',
   },
   INVESTMENTS: {
-    label: "Investments", 
+    label: 'Investments',
     icon: <TrendingUp className="h-5 w-5" />,
-    color: "#8B5CF6",
-    description: "Stocks, bonds, mutual funds, ETFs"
+    color: '#8B5CF6',
+    description: 'Stocks, bonds, mutual funds, ETFs',
   },
   CASH_EQUIVALENTS: {
-    label: "Cash & Equivalents",
+    label: 'Cash & Equivalents',
     icon: <Coins className="h-5 w-5" />,
-    color: "#10B981",
-    description: "Checking, savings, money market accounts"
+    color: '#10B981',
+    description: 'Checking, savings, money market accounts',
   },
   STOCKS_FUNDS_CDS: {
-    label: "Stocks/Funds/CDs",
+    label: 'Stocks/Funds/CDs',
     icon: <Briefcase className="h-5 w-5" />,
-    color: "#F59E0B",
-    description: "Individual stocks, index funds, CDs"
+    color: '#F59E0B',
+    description: 'Individual stocks, index funds, CDs',
   },
   BUSINESS: {
-    label: "Business",
+    label: 'Business',
     icon: <Building className="h-5 w-5" />,
-    color: "#EF4444",
-    description: "Business ownership and partnerships"
+    color: '#EF4444',
+    description: 'Business ownership and partnerships',
   },
   PERSONAL_PROPERTY: {
-    label: "Personal Property",
+    label: 'Personal Property',
     icon: <Building className="h-5 w-5" />,
-    color: "#6B7280",
-    description: "Vehicles, jewelry, collectibles"
-  }
+    color: '#6B7280',
+    description: 'Vehicles, jewelry, collectibles',
+  },
 }
 
 interface AssetTypeCardProps {
@@ -55,29 +62,34 @@ interface AssetTypeCardProps {
 
 function AssetTypeCard({ type, value, percentage, count }: AssetTypeCardProps) {
   const config = ASSET_TYPE_CONFIG[type]
-  
+
   return (
     <Card className="p-4 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
-          <div className="p-2 rounded-lg" style={{ backgroundColor: `${config.color}20` }}>
-            <div style={{ color: config.color }}>
-              {config.icon}
-            </div>
+          <div
+            className="p-2 rounded-lg"
+            style={{ backgroundColor: `${config.color}20` }}
+          >
+            <div style={{ color: config.color }}>{config.icon}</div>
           </div>
           <div>
             <h3 className="font-medium text-gray-900">{config.label}</h3>
-            <p className="text-xs text-gray-500">{count} {count === 1 ? 'asset' : 'assets'}</p>
+            <p className="text-xs text-gray-500">
+              {count} {count === 1 ? 'asset' : 'assets'}
+            </p>
           </div>
         </div>
         <Button variant="ghost" size="sm">
           <Plus className="h-4 w-4" />
         </Button>
       </div>
-      
+
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <span className="text-lg font-bold text-gray-900">{formatCurrency(value)}</span>
+          <span className="text-lg font-bold text-gray-900">
+            {formatCurrency(value)}
+          </span>
           <span className="text-sm font-medium" style={{ color: config.color }}>
             {formatPercentage(percentage)}
           </span>
@@ -88,10 +100,27 @@ function AssetTypeCard({ type, value, percentage, count }: AssetTypeCardProps) {
   )
 }
 
-function AllocationChart({ data }: { data: any[] }) {
-  const CustomTooltip = ({ active, payload }: any) => {
+interface ChartData {
+  name: string
+  value: number
+  percentage: number
+  color: string
+}
+
+interface TooltipPayload {
+  payload: ChartData
+}
+
+interface CustomTooltipProps {
+  active?: boolean
+  payload?: TooltipPayload[]
+}
+
+function AllocationChart({ data }: { data: ChartData[] }) {
+  const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload
+      const data = payload[0]?.payload
+      if (!data) return null
       return (
         <div className="bg-white p-3 border rounded-lg shadow-lg">
           <p className="font-medium text-gray-900">{data.name}</p>
@@ -106,7 +135,9 @@ function AllocationChart({ data }: { data: any[] }) {
 
   return (
     <Card className="p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Asset Allocation</h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        Asset Allocation
+      </h3>
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -131,12 +162,14 @@ function AllocationChart({ data }: { data: any[] }) {
         <div className="grid grid-cols-2 gap-2 text-sm">
           {data.map((item, index) => (
             <div key={index} className="flex items-center space-x-2">
-              <div 
-                className="w-3 h-3 rounded-full" 
+              <div
+                className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: item.color }}
               ></div>
               <span className="text-gray-600 truncate">{item.name}</span>
-              <span className="text-gray-900 font-medium">{formatPercentage(item.percentage)}</span>
+              <span className="text-gray-900 font-medium">
+                {formatPercentage(item.percentage)}
+              </span>
             </div>
           ))}
         </div>
@@ -146,7 +179,7 @@ function AllocationChart({ data }: { data: any[] }) {
 }
 
 export default function AssetAllocation() {
-  const { data: portfolioData, isLoading } = trpc.asset.getPortfolioAllocation.useQuery()
+  const { isLoading } = trpc.asset.getPortfolioAllocation.useQuery()
 
   if (isLoading) {
     return (
@@ -165,16 +198,16 @@ export default function AssetAllocation() {
 
   // Mock data based on the original app screenshots
   const mockAllocation = [
-    { type: "REAL_ESTATE", value: 250000, percentage: 76.92, count: 1 },
-    { type: "INVESTMENTS", value: 45000, percentage: 13.85, count: 3 },
-    { type: "CASH_EQUIVALENTS", value: 30000, percentage: 9.23, count: 3 }
+    { type: 'REAL_ESTATE', value: 250000, percentage: 76.92, count: 1 },
+    { type: 'INVESTMENTS', value: 45000, percentage: 13.85, count: 3 },
+    { type: 'CASH_EQUIVALENTS', value: 30000, percentage: 9.23, count: 3 },
   ]
 
   const chartData = mockAllocation.map(item => ({
     name: ASSET_TYPE_CONFIG[item.type as keyof typeof ASSET_TYPE_CONFIG].label,
     value: item.value,
     percentage: item.percentage,
-    color: ASSET_TYPE_CONFIG[item.type as keyof typeof ASSET_TYPE_CONFIG].color
+    color: ASSET_TYPE_CONFIG[item.type as keyof typeof ASSET_TYPE_CONFIG].color,
   }))
 
   return (
@@ -189,9 +222,9 @@ export default function AssetAllocation() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <AllocationChart data={chartData} />
-        
+
         <div className="space-y-4">
-          {mockAllocation.map((allocation) => (
+          {mockAllocation.map(allocation => (
             <AssetTypeCard
               key={allocation.type}
               type={allocation.type as keyof typeof ASSET_TYPE_CONFIG}
@@ -206,7 +239,9 @@ export default function AssetAllocation() {
       {/* Asset Details */}
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Real Estate</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Real Estate
+          </h3>
           <div className="text-2xl font-bold text-gray-900 mb-2">$250,000</div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -215,7 +250,9 @@ export default function AssetAllocation() {
                 <span className="text-sm text-gray-900">Primary Home</span>
               </div>
               <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">$250,000</div>
+                <div className="text-sm font-medium text-gray-900">
+                  $250,000
+                </div>
                 <div className="text-xs text-green-600">+5.2%</div>
               </div>
             </div>
@@ -226,13 +263,17 @@ export default function AssetAllocation() {
         </Card>
 
         <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Investments</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Investments
+          </h3>
           <div className="text-2xl font-bold text-gray-900 mb-2">$45,000</div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <TrendingUp className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-900">S&P 500 Index Fund</span>
+                <span className="text-sm text-gray-900">
+                  S&P 500 Index Fund
+                </span>
               </div>
               <div className="text-right">
                 <div className="text-sm font-medium text-gray-900">$25,000</div>
