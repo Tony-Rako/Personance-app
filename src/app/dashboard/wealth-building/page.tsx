@@ -1,54 +1,87 @@
 'use client'
 
+import React, { useState } from 'react'
 import CashFlowQuadrant from '@/components/wealth-building/cash-flow-quadrant'
+import IncomeExpenseManager from '@/components/dashboard/income-expense-manager'
+import AssetManager from '@/components/dashboard/asset-manager'
+import LiabilityManager from '@/components/dashboard/liability-manager'
 import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { formatCurrency } from '@/lib/financial-utils'
-import { Plus, Trash2, DollarSign, CreditCard } from 'lucide-react'
+import {
+  formatCurrency,
+  calculatePassiveIncome,
+  calculateEscapeRatRaceProgress,
+} from '@/lib/financial-utils'
+import { useFinancialSummary } from '@/hooks/use-financial-summary'
+import { trpc } from '@/lib/trpc'
+import { DollarSign, CreditCard, Target } from 'lucide-react'
 
 export default function WealthBuildingPage() {
-  // Sample data - would come from API in real app
-  const incomeData = [
-    {
-      id: 1,
-      name: 'Police Officer Salary',
-      amount: 3000,
-      frequency: 'monthly',
-    },
-    { id: 2, name: 'Interest/Dividends', amount: 150, frequency: 'monthly' },
-  ]
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'income-expenses' | 'assets' | 'liabilities'
+  >('overview')
 
-  const expenseData = [
-    { id: 1, name: 'Grocery', amount: 50, frequency: 'weekly' },
-    { id: 2, name: 'Taxes', amount: 580, frequency: 'monthly' },
-    { id: 3, name: 'Home Mortgage Payment', amount: 400, frequency: 'monthly' },
-  ]
+  // Get real financial data
+  const { summary: financialSummary } = useFinancialSummary()
+  const { data: incomes } = trpc.income.getAll.useQuery()
+  const { data: passiveIncomeGoal } = trpc.goal.getPassiveIncomeGoal.useQuery()
 
-  const assets = [
-    { category: 'Stocks/Funds/CDs', items: [], total: 0 },
-    { category: 'Real Estate/Business', items: [], total: 0 },
-  ]
+  // Calculate escape the rat race progress
+  const monthlyExpenses = financialSummary.totalExpenses
 
-  const liabilities = [
-    { name: 'Home Mortgage', amount: 46000 },
-    { name: 'Car Loans', amount: 5000 },
-    { name: 'Credit Cards', amount: 2000 },
-    { name: 'Retail Debt', amount: 1000 },
-  ]
+  // Auto-update passive income goal progress (with throttling protection)
+  const updatePassiveIncomeProgress =
+    trpc.goal.updatePassiveIncomeProgress.useMutation({
+      onSuccess: () => {
+        // Only invalidate the specific passive income goal query, not all goals
+        trpc.useUtils().goal.getPassiveIncomeGoal.invalidate()
+      },
+    })
 
-  const passiveIncomeGoal = {
-    current: 0,
-    target: 2000,
-    progress: 0,
-  }
+  // Memoize passive income calculation to prevent unnecessary recalculations
+  const memoizedPassiveIncome = React.useMemo(() => {
+    if (!incomes) return 0
+    return calculatePassiveIncome(
+      incomes.map(income => ({
+        source: income.source,
+        amount: parseFloat(income.amount.toString()),
+      }))
+    )
+  }, [incomes])
 
-  const totalIncome = 3000
-  const totalExpenses = 1880
-  const netCashFlow = -175
+  // Calculate escape progress using memoized passive income
+  const escapeProgress = React.useMemo(
+    () =>
+      calculateEscapeRatRaceProgress(memoizedPassiveIncome, monthlyExpenses),
+    [memoizedPassiveIncome, monthlyExpenses]
+  )
+
+  // Debounced update effect - only update when passive income changes significantly
+  React.useEffect(() => {
+    if (memoizedPassiveIncome > 0 && passiveIncomeGoal) {
+      const currentAmount = parseFloat(
+        passiveIncomeGoal.currentAmount.toString()
+      )
+      const difference = Math.abs(currentAmount - memoizedPassiveIncome)
+
+      // Only update if difference is significant (> $1) and not already pending
+      if (difference > 1 && !updatePassiveIncomeProgress.isPending) {
+        updatePassiveIncomeProgress.mutate({
+          passiveIncome: memoizedPassiveIncome,
+        })
+      }
+    }
+  }, [
+    memoizedPassiveIncome,
+    passiveIncomeGoal?.id,
+    passiveIncomeGoal?.currentAmount,
+    passiveIncomeGoal,
+    updatePassiveIncomeProgress,
+  ])
 
   return (
     <div className="space-y-8">
+      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Wealth Building</h1>
         <p className="text-gray-600 mt-2">
@@ -57,256 +90,191 @@ export default function WealthBuildingPage() {
         </p>
       </div>
 
-      <CashFlowQuadrant />
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: 'overview', label: 'Overview', icon: Target },
+            {
+              id: 'income-expenses',
+              label: 'Income & Expenses',
+              icon: DollarSign,
+            },
+            { id: 'assets', label: 'Assets', icon: Target },
+            { id: 'liabilities', label: 'Liabilities', icon: CreditCard },
+          ].map(tab => {
+            const Icon = tab.icon
+            return (
+              <button
+                key={tab.id}
+                onClick={() =>
+                  setActiveTab(
+                    tab.id as
+                      | 'overview'
+                      | 'income-expenses'
+                      | 'assets'
+                      | 'liabilities'
+                  )
+                }
+                className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span>{tab.label}</span>
+              </button>
+            )
+          })}
+        </nav>
+      </div>
 
-      {/* Main Content - 2 Column Layout */}
-      <div className="grid lg:grid-cols-2 gap-8">
-        {/* Left Column */}
-        <div className="space-y-6">
-          {/* Income Sources */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <DollarSign className="h-5 w-5 text-green-600" />
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Income Sources
-                </h3>
-              </div>
-              <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              {incomeData.map(income => (
-                <div
-                  key={income.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div>
-                    <p className="font-medium text-gray-900">{income.name}</p>
-                    <p className="text-sm text-gray-600">
-                      {formatCurrency(income.amount)} / {income.frequency}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-
-              {/* Real Estate/Business Tab */}
-              <div className="border-t pt-4">
-                <div className="border border-blue-200 rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-blue-600 font-medium">
-                      Real Estate/Business
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Expenses */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <CreditCard className="h-5 w-5 text-red-600" />
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Expenses
-                </h3>
-              </div>
-              <Button size="sm" variant="destructive">
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              {expenseData.map(expense => (
-                <div
-                  key={expense.id}
-                  className="flex items-center justify-between p-3 bg-red-50 rounded-lg"
-                >
-                  <div>
-                    <p className="font-medium text-gray-900">{expense.name}</p>
-                    <p className="text-sm text-gray-600">
-                      {formatCurrency(expense.amount)} / {expense.frequency}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-
-              {/* Additional expense categories */}
-              <div className="text-sm text-gray-600 space-y-1 mt-4 pl-3 border-l-2 border-gray-200">
-                <p>Car Loan Payment</p>
-                <p>Credit Card Payment</p>
-                <p>Retail Payment</p>
-                <p>Other Expenses</p>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Right Column */}
-        <div className="space-y-6">
+      {/* Tab Content */}
+      {activeTab === 'overview' && (
+        <div className="space-y-8">
           {/* Financial Goals */}
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Financial Goals
+              Escape The Rat Race Progress
             </h3>
 
             <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-medium text-gray-900">
-                    Increase Passive Income To Escape The Rat Race
-                  </p>
-                  <span className="text-sm text-gray-600">
-                    {formatCurrency(passiveIncomeGoal.current)} of{' '}
-                    {formatCurrency(passiveIncomeGoal.target)}
-                  </span>
-                </div>
-                <Progress
-                  value={passiveIncomeGoal.progress}
-                  className="h-2 mb-2"
-                />
-                <p className="text-xs text-blue-600">$0 of $2000</p>
-                <p className="text-xs text-gray-500">Passive Income</p>
-              </div>
-
-              {/* Financial Summary */}
-              <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t">
+              {passiveIncomeGoal ? (
                 <div>
-                  <p className="text-xs text-gray-600">CASH</p>
-                  <p className="font-semibold">$520</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-medium text-gray-900">
+                      {passiveIncomeGoal.name}
+                    </p>
+                    <span className="text-sm text-gray-600">
+                      {formatCurrency(memoizedPassiveIncome)} /{' '}
+                      {formatCurrency(
+                        parseFloat(passiveIncomeGoal.targetAmount.toString())
+                      )}
+                    </span>
+                  </div>
+                  <Progress
+                    value={Math.min(escapeProgress, 100)}
+                    className="h-3 mb-2"
+                  />
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">
+                      Progress: {escapeProgress.toFixed(1)}%
+                    </span>
+                    <span
+                      className={
+                        escapeProgress >= 100
+                          ? 'text-green-600 font-semibold'
+                          : 'text-gray-600'
+                      }
+                    >
+                      {escapeProgress >= 100
+                        ? '🎉 Financial Freedom!'
+                        : 'Keep building passive income'}
+                    </span>
+                  </div>
+                  {passiveIncomeGoal.description && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      {passiveIncomeGoal.description}
+                    </p>
+                  )}
                 </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-medium text-gray-900">
+                      Passive Income vs Monthly Expenses
+                    </p>
+                    <span className="text-sm text-gray-600">
+                      {formatCurrency(memoizedPassiveIncome)} /{' '}
+                      {formatCurrency(monthlyExpenses)}
+                    </span>
+                  </div>
+                  <Progress
+                    value={Math.min(escapeProgress, 100)}
+                    className="h-3 mb-2"
+                  />
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">
+                      Progress: {escapeProgress.toFixed(1)}%
+                    </span>
+                    <span
+                      className={
+                        escapeProgress >= 100
+                          ? 'text-green-600 font-semibold'
+                          : 'text-gray-600'
+                      }
+                    >
+                      {escapeProgress >= 100
+                        ? '🎉 Financial Freedom!'
+                        : 'Keep building passive income'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Add expenses to automatically create your escape the rat
+                    race goal
+                  </p>
+                </div>
+              )}
+              {/* Financial Summary */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-4 border-t">
                 <div>
                   <p className="text-xs text-gray-600">TOTAL INCOME</p>
                   <p className="font-semibold text-green-600">
-                    {formatCurrency(totalIncome)}
+                    {formatCurrency(financialSummary.totalIncome)}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-600">TOTAL EXPENSES</p>
                   <p className="font-semibold text-red-600">
-                    -{formatCurrency(totalExpenses)}
+                    {formatCurrency(financialSummary.totalExpenses)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-600">PAYDAY</p>
-                  <p className="font-semibold">$1,120</p>
+                  <p className="text-xs text-gray-600">CASH FLOW</p>
+                  <p
+                    className={`font-semibold ${financialSummary.cashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                  >
+                    {formatCurrency(financialSummary.cashFlow, {
+                      showSign: true,
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">NET WORTH</p>
+                  <p
+                    className={`font-semibold ${financialSummary.netWorth >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                  >
+                    {formatCurrency(financialSummary.netWorth, {
+                      showSign: true,
+                    })}
+                  </p>
                 </div>
               </div>
             </div>
           </Card>
-        </div>
-      </div>
 
-      {/* Assets & Liabilities */}
-      <div className="grid lg:grid-cols-2 gap-8">
-        {/* Assets */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Assets</h3>
-            <Button variant="ghost" size="sm" className="text-blue-600">
-              Manage
-            </Button>
-          </div>
-
-          {assets.map((asset, index) => (
-            <div
-              key={index}
-              className="py-3 border-b border-gray-200 last:border-b-0"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-gray-900">{asset.category}</span>
-                <div className="flex items-center space-x-2">
-                  <span className="text-gray-600">Cost/Share ▲</span>
-                </div>
-              </div>
-              <p className="text-sm text-gray-500 mt-1">
-                + Add {asset.category}
-              </p>
-            </div>
-          ))}
-        </Card>
-
-        {/* Liabilities */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Liabilities</h3>
-            <Button variant="ghost" size="sm" className="text-blue-600">
-              Manage
-            </Button>
-          </div>
-
-          <div className="space-y-3">
-            {liabilities.map((liability, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between py-2"
-              >
-                <span className="text-gray-900">{liability.name}</span>
-                <span className="font-medium">
-                  {formatCurrency(liability.amount)}
-                </span>
-              </div>
-            ))}
-            <div className="pt-2">
-              <p className="text-sm text-gray-500">
-                Click to add new liability
-              </p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Net Cash Flow */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              Net Cash Flow
+          {/* Rich Dad Definition */}
+          <Card className="p-6 bg-purple-50 border-purple-200">
+            <h3 className="text-lg font-semibold text-purple-900 mb-2">
+              Rich Dad Definition
             </h3>
-            <p className="text-sm text-gray-600">
-              Assets income minus liability payments
+            <p className="text-sm text-purple-800">
+              <strong>Asset:</strong> Puts money in your pocket.{' '}
+              <strong>Liability:</strong> Takes money out of your pocket. The
+              rich buy assets, the poor and middle class buy liabilities they
+              think are assets.
             </p>
-          </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-red-600">
-              {formatCurrency(netCashFlow)}
-            </p>
-            <p className="text-sm text-gray-600">per month</p>
-          </div>
-        </div>
-      </Card>
+          </Card>
 
-      {/* Rich Dad Definition */}
-      <Card className="p-6 bg-purple-50 border-purple-200">
-        <h3 className="text-lg font-semibold text-purple-900 mb-2">
-          Rich Dad Definition
-        </h3>
-        <p className="text-sm text-purple-800">
-          <strong>Asset:</strong> Puts money in your pocket.{' '}
-          <strong>Liability:</strong> Takes money out of your pocket. The rich
-          buy assets, the poor and middle class buy liabilities they think are
-          assets.
-        </p>
-      </Card>
+          {/* Cash Flow Quadrant */}
+          <CashFlowQuadrant />
+        </div>
+      )}
+
+      {activeTab === 'income-expenses' && <IncomeExpenseManager />}
+      {activeTab === 'assets' && <AssetManager />}
+      {activeTab === 'liabilities' && <LiabilityManager />}
     </div>
   )
 }

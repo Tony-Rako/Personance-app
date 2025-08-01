@@ -3,12 +3,14 @@ import { Inter } from 'next/font/google'
 import '@/styles/globals.css'
 import AuthProvider from '@/components/providers/session-provider'
 import TRPCProvider from '@/components/providers/trpc-provider'
+import { Toaster } from '@/components/ui/toaster'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Personance Dashboard - Personal Finance Management',
-  description: 'Your comprehensive personal finance dashboard. Track expenses, build budgets, monitor investments, and achieve your financial goals.',
+  description:
+    'Your comprehensive personal finance dashboard. Track expenses, build budgets, monitor investments, and achieve your financial goals.',
 }
 
 export default function RootLayout({
@@ -22,6 +24,7 @@ export default function RootLayout({
         <AuthProvider>
           <TRPCProvider>
             {children}
+            <Toaster />
           </TRPCProvider>
         </AuthProvider>
       </body>

@@ -1,9 +1,11 @@
 'use client'
 
+import React, { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useBudgetSummary } from '@/hooks/use-financial-summary'
 import { formatCurrency, formatPercentage } from '@/lib/financial-utils'
+import BudgetCreateDialog from './budget-create-dialog'
 import {
   Calendar,
   TrendingUp,
@@ -15,6 +17,7 @@ import { format } from 'date-fns'
 
 export default function BudgetOverview() {
   const { summary, currentBudget, isLoading } = useBudgetSummary()
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
 
   if (isLoading) {
     return (
@@ -49,7 +52,9 @@ export default function BudgetOverview() {
             Start taking control of your finances by creating a monthly budget.
             Track your spending and stay on top of your financial goals.
           </p>
-          <Button size="lg">Create Budget</Button>
+          <Button size="lg" onClick={() => setShowCreateDialog(true)}>
+            Create Budget
+          </Button>
         </div>
       </Card>
     )
@@ -81,7 +86,18 @@ export default function BudgetOverview() {
               {format(currentBudget.endDate, 'MMM dd, yyyy')}
             </p>
           </div>
-          <Button variant="outline">Edit Budget</Button>
+          <div className="flex space-x-2">
+            <Button variant="outline" size="sm">
+              Edit Budget
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCreateDialog(true)}
+            >
+              New Budget
+            </Button>
+          </div>
         </div>
 
         {/* Progress Bar */}
@@ -245,6 +261,12 @@ export default function BudgetOverview() {
           </div>
         </Card>
       </div>
+
+      {/* Budget Create Dialog */}
+      <BudgetCreateDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+      />
     </div>
   )
 }

@@ -1,10 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Dialog } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog'
 import { trpc } from '@/lib/trpc'
 import {
   formatCurrency,
@@ -71,74 +78,196 @@ function AddCategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
-        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-          <h3 className="text-lg font-semibold mb-4">Add Budget Category</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Category Name
-              </label>
-              <Input
-                placeholder="e.g., Housing, Food, Transportation"
-                value={formData.name}
-                onChange={e =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-              />
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Budget Category</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Category Name
+            </label>
+            <Input
+              placeholder="e.g., Housing, Food, Transportation"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Allocated Amount
+            </label>
+            <Input
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={formData.allocatedAmount || ''}
+              onChange={e =>
+                setFormData({
+                  ...formData,
+                  allocatedAmount: parseFloat(e.target.value) || 0,
+                })
+              }
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Color</label>
+            <div className="flex space-x-2">
+              {categoryColors.map(color => (
+                <button
+                  key={color}
+                  type="button"
+                  className={`w-8 h-8 rounded-full border-2 ${
+                    formData.color === color
+                      ? 'border-gray-400'
+                      : 'border-gray-200'
+                  }`}
+                  style={{ backgroundColor: color }}
+                  onClick={() => setFormData({ ...formData, color: color })}
+                />
+              ))}
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Allocated Amount
-              </label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={formData.allocatedAmount || ''}
-                onChange={e =>
-                  setFormData({
-                    ...formData,
-                    allocatedAmount: parseFloat(e.target.value) || 0,
-                  })
-                }
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Color</label>
-              <div className="flex space-x-2">
-                {categoryColors.map(color => (
-                  <button
-                    key={color}
-                    type="button"
-                    className={`w-8 h-8 rounded-full border-2 ${
-                      formData.color === color
-                        ? 'border-gray-400'
-                        : 'border-gray-200'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setFormData({ ...formData, color: color })}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
                 Cancel
               </Button>
-              <Button type="submit" disabled={createCategory.isPending}>
-                {createCategory.isPending ? 'Adding...' : 'Add Category'}
-              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={createCategory.isPending}>
+              {createCategory.isPending ? 'Adding...' : 'Add Category'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+interface EditCategoryDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  category: {
+    id: string
+    name: string
+    allocatedAmount: { toString(): string }
+    color: string
+  } | null
+}
+
+function EditCategoryDialog({
+  open,
+  onOpenChange,
+  category,
+}: EditCategoryDialogProps) {
+  const [formData, setFormData] = useState<BudgetCategoryFormData>({
+    name: category?.name || '',
+    allocatedAmount: category
+      ? parseFloat(category.allocatedAmount.toString())
+      : 0,
+    color: category?.color || categoryColors[0] || '#3B82F6',
+  })
+
+  const utils = trpc.useUtils()
+  const updateCategory = trpc.budgetCategory.update.useMutation({
+    onSuccess: () => {
+      utils.budget.getCurrent.invalidate()
+      onOpenChange(false)
+    },
+  })
+
+  React.useEffect(() => {
+    if (category) {
+      setFormData({
+        name: category.name,
+        allocatedAmount: parseFloat(category.allocatedAmount.toString()),
+        color: category.color,
+      })
+    }
+  }, [category])
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!category) return
+
+    updateCategory.mutate({
+      id: category.id,
+      name: formData.name,
+      allocatedAmount: formData.allocatedAmount,
+      color: formData.color,
+    })
+  }
+
+  if (!category) return null
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Budget Category</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Category Name
+            </label>
+            <Input
+              placeholder="e.g., Housing, Food, Transportation"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Allocated Amount
+            </label>
+            <Input
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={formData.allocatedAmount || ''}
+              onChange={e =>
+                setFormData({
+                  ...formData,
+                  allocatedAmount: parseFloat(e.target.value) || 0,
+                })
+              }
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Color</label>
+            <div className="flex space-x-2">
+              {categoryColors.map(color => (
+                <button
+                  key={color}
+                  type="button"
+                  className={`w-8 h-8 rounded-full border-2 ${
+                    formData.color === color
+                      ? 'border-gray-400'
+                      : 'border-gray-200'
+                  }`}
+                  style={{ backgroundColor: color }}
+                  onClick={() => setFormData({ ...formData, color: color })}
+                />
+              ))}
             </div>
-          </form>
-        </div>
-      </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={updateCategory.isPending}>
+              {updateCategory.isPending ? 'Updating...' : 'Update Category'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
     </Dialog>
   )
 }
@@ -152,9 +281,15 @@ interface CategoryCardProps {
     color: string
   }
   budgetEndDate: Date
+  onEdit: (category: {
+    id: string
+    name: string
+    allocatedAmount: { toString(): string }
+    color: string
+  }) => void
 }
 
-function CategoryCard({ category, budgetEndDate }: CategoryCardProps) {
+function CategoryCard({ category, budgetEndDate, onEdit }: CategoryCardProps) {
   const allocated = parseFloat(category.allocatedAmount.toString())
   const spent = parseFloat(category.spentAmount.toString())
   const remaining = allocated - spent
@@ -214,7 +349,18 @@ function CategoryCard({ category, budgetEndDate }: CategoryCardProps) {
           <h3 className="font-medium text-gray-900">{category.name}</h3>
         </div>
         <div className="flex items-center space-x-1">
-          <Button variant="ghost" size="sm">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              onEdit({
+                id: category.id,
+                name: category.name,
+                allocatedAmount: category.allocatedAmount,
+                color: category.color,
+              })
+            }
+          >
             <Edit2 className="h-3 w-3" />
           </Button>
           <Button
@@ -311,6 +457,23 @@ export default function BudgetCategories({
   currentBudget,
 }: BudgetCategoriesProps) {
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<{
+    id: string
+    name: string
+    allocatedAmount: { toString(): string }
+    color: string
+  } | null>(null)
+
+  const handleEditCategory = (category: {
+    id: string
+    name: string
+    allocatedAmount: { toString(): string }
+    color: string
+  }) => {
+    setEditingCategory(category)
+    setShowEditDialog(true)
+  }
 
   if (!currentBudget) {
     return null
@@ -333,6 +496,7 @@ export default function BudgetCategories({
               key={category.id}
               category={category}
               budgetEndDate={currentBudget.endDate}
+              onEdit={handleEditCategory}
             />
           ))}
         </div>
@@ -360,6 +524,12 @@ export default function BudgetCategories({
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
         budgetId={currentBudget.id}
+      />
+
+      <EditCategoryDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        category={editingCategory}
       />
     </div>
   )

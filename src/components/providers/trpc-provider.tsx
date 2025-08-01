@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { httpBatchLink } from '@trpc/client'
@@ -11,7 +11,22 @@ export default function TRPCProvider({
 }: {
   children: React.ReactNode
 }) {
-  const [queryClient] = useState(() => new QueryClient())
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            // Reduce unnecessary refetches
+            staleTime: 30 * 1000, // 30 seconds
+            gcTime: 5 * 60 * 1000, // 5 minutes (renamed from cacheTime)
+            // Prevent background refetches for financial data
+            refetchOnWindowFocus: false,
+            refetchOnMount: true,
+            refetchOnReconnect: false,
+          },
+        },
+      })
+  )
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [
@@ -25,9 +40,7 @@ export default function TRPCProvider({
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </trpc.Provider>
   )
 }

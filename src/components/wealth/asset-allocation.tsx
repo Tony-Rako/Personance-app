@@ -179,7 +179,9 @@ function AllocationChart({ data }: { data: ChartData[] }) {
 }
 
 export default function AssetAllocation() {
-  const { isLoading } = trpc.asset.getPortfolioAllocation.useQuery()
+  const { data: portfolioData, isLoading } =
+    trpc.asset.getPortfolioAllocation.useQuery()
+  const { data: assets } = trpc.asset.getAll.useQuery()
 
   if (isLoading) {
     return (
@@ -196,14 +198,9 @@ export default function AssetAllocation() {
     )
   }
 
-  // Mock data based on the original app screenshots
-  const mockAllocation = [
-    { type: 'REAL_ESTATE', value: 250000, percentage: 76.92, count: 1 },
-    { type: 'INVESTMENTS', value: 45000, percentage: 13.85, count: 3 },
-    { type: 'CASH_EQUIVALENTS', value: 30000, percentage: 9.23, count: 3 },
-  ]
+  const allocation = portfolioData?.allocation || []
 
-  const chartData = mockAllocation.map(item => ({
+  const chartData = allocation.map(item => ({
     name: ASSET_TYPE_CONFIG[item.type as keyof typeof ASSET_TYPE_CONFIG].label,
     value: item.value,
     percentage: item.percentage,
@@ -224,88 +221,75 @@ export default function AssetAllocation() {
         <AllocationChart data={chartData} />
 
         <div className="space-y-4">
-          {mockAllocation.map(allocation => (
+          {allocation.map(allocationItem => (
             <AssetTypeCard
-              key={allocation.type}
-              type={allocation.type as keyof typeof ASSET_TYPE_CONFIG}
-              value={allocation.value}
-              percentage={allocation.percentage}
-              count={allocation.count}
+              key={allocationItem.type}
+              type={allocationItem.type as keyof typeof ASSET_TYPE_CONFIG}
+              value={allocationItem.value}
+              percentage={allocationItem.percentage}
+              count={allocationItem.count}
             />
           ))}
         </div>
       </div>
 
-      {/* Asset Details */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Real Estate
-          </h3>
-          <div className="text-2xl font-bold text-gray-900 mb-2">$250,000</div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Home className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-900">Primary Home</span>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">
-                  $250,000
-                </div>
-                <div className="text-xs text-green-600">+5.2%</div>
-              </div>
-            </div>
-            <button className="text-blue-600 hover:text-blue-700 text-sm">
-              Click to add new real estate asset
-            </button>
-          </div>
-        </Card>
+      {/* Asset Details - Dynamic based on allocation */}
+      {allocation.length > 0 && (
+        <div className="grid gap-6 md:grid-cols-2">
+          {allocation.slice(0, 2).map(allocationItem => {
+            const config =
+              ASSET_TYPE_CONFIG[
+                allocationItem.type as keyof typeof ASSET_TYPE_CONFIG
+              ]
+            const typeAssets =
+              assets?.filter(asset => asset.type === allocationItem.type) || []
 
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Investments
-          </h3>
-          <div className="text-2xl font-bold text-gray-900 mb-2">$45,000</div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-900">
-                  S&P 500 Index Fund
-                </span>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">$25,000</div>
-                <div className="text-xs text-green-600">+12.5%</div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-900">Tech Growth ETF</span>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">$15,000</div>
-                <div className="text-xs text-green-600">+15.8%</div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Briefcase className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-900">Bond Fund</span>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">$5,000</div>
-                <div className="text-xs text-green-600">+3.2%</div>
-              </div>
-            </div>
-            <button className="text-blue-600 hover:text-blue-700 text-sm">
-              Click to add new investments asset
-            </button>
-          </div>
-        </Card>
-      </div>
+            return (
+              <Card key={allocationItem.type} className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  {config.label}
+                </h3>
+                <div className="text-2xl font-bold text-gray-900 mb-2">
+                  {formatCurrency(allocationItem.value)}
+                </div>
+                <div className="space-y-3">
+                  {typeAssets.slice(0, 3).map(asset => (
+                    <div
+                      key={asset.id}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center space-x-2">
+                        {config.icon}
+                        <span className="text-sm text-gray-900">
+                          {asset.name}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-gray-900">
+                          {formatCurrency(Number(asset.value))}
+                        </div>
+                        {asset.growth && (
+                          <div
+                            className={`text-xs ${Number(asset.growth) >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                          >
+                            {Number(asset.growth) >= 0 ? '+' : ''}
+                            {formatPercentage(Number(asset.growth))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {typeAssets.length === 0 && (
+                    <button className="text-blue-600 hover:text-blue-700 text-sm">
+                      Click to add new {config.label.toLowerCase()} asset
+                    </button>
+                  )}
+                </div>
+              </Card>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
