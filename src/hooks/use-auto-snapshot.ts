@@ -69,7 +69,7 @@ export const useAutoSnapshot = () => {
         utils.networth.getNetWorthHistory.invalidate()
         utils.networth.getPerformanceMetrics.invalidate()
         return { success: true }
-      } catch (error) {
+      } catch (error: unknown) {
         return { success: false, error }
       }
     },

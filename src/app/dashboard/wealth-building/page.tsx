@@ -15,6 +15,7 @@ import {
 import { useFinancialSummary } from '@/hooks/use-financial-summary'
 import { trpc } from '@/lib/trpc'
 import { DollarSign, CreditCard, Target } from 'lucide-react'
+import type { Income } from '@prisma/client'
 
 export default function WealthBuildingPage() {
   const [activeTab, setActiveTab] = useState<
@@ -42,7 +43,7 @@ export default function WealthBuildingPage() {
   const memoizedPassiveIncome = React.useMemo(() => {
     if (!incomes) return 0
     return calculatePassiveIncome(
-      incomes.map(income => ({
+      incomes.map((income: Income) => ({
         source: income.source,
         amount: parseFloat(income.amount.toString()),
       }))

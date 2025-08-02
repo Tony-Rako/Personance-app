@@ -256,7 +256,7 @@ export const onboardingRouter = createTRPCRouter({
         })
 
         return result
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error completing onboarding:', error)
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',

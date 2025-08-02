@@ -27,7 +27,7 @@ export default function SignIn() {
       if (result?.ok) {
         router.push('/dashboard')
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Sign in error:', error)
     } finally {
       setLoading(false)
@@ -38,7 +38,7 @@ export default function SignIn() {
     setLoading(true)
     try {
       await signIn(provider, { callbackUrl: '/dashboard' })
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`${provider} sign in error:`, error)
     } finally {
       setLoading(false)
