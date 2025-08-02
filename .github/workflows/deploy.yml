@@ -3,7 +3,7 @@ name: Deploy Personance App
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:  # Allows manual triggering
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -48,11 +48,17 @@ jobs:
           docker stop personance-app-production 2>/dev/null || true
           docker rm personance-app-production 2>/dev/null || true
           
-          echo "Starting new container with Traefik labels..."
+          echo "Starting new container with environment variables..."
           docker run -d \
             --name personance-app-production \
             --network root_web \
             --restart unless-stopped \
+            -e "AUTH_GOOGLE_ID=${{ secrets.AUTH_GOOGLE_ID }}" \
+            -e "AUTH_GOOGLE_REDIRECT_URL=${{ secrets.AUTH_GOOGLE_REDIRECT_URL }}" \
+            -e "AUTH_GOOGLE_SECRET=${{ secrets.AUTH_GOOGLE_SECRET }}" \
+            -e "AUTH_SECRET=${{ secrets.AUTH_SECRET }}" \
+            -e "DATABASE_PROVIDER=${{ secrets.DATABASE_PROVIDER }}" \
+            -e "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
             --label "traefik.enable=true" \
             --label "traefik.http.routers.personance-http.rule=Host(\`personance-app.indiongo-ing.com\`)" \
             --label "traefik.http.routers.personance-http.entrypoints=web" \
