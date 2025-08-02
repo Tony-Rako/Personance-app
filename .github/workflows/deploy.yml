@@ -1,0 +1,69 @@
+name: Deploy Personance App
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker Image
+      run: |
+        docker build -t personance-app:${{ github.sha }} .
+        docker tag personance-app:${{ github.sha }} personance-app:latest
+    
+    - name: Save Docker Image
+      run: |
+        docker save personance-app:latest | gzip > personance-app.tar.gz
+    
+    - name: Copy image to VPS
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        source: "personance-app.tar.gz"
+        target: "/tmp/"
+    
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        script: |
+          echo "Loading new Docker image..."
+          docker load < /tmp/personance-app.tar.gz
+          
+          echo "Stopping old container..."
+          docker stop personance-app-production 2>/dev/null || true
+          docker rm personance-app-production 2>/dev/null || true
+          
+          echo "Starting new container with Traefik labels..."
+          docker run -d \
+            --name personance-app-production \
+            --network root_web \
+            --restart unless-stopped \
+            --label "traefik.enable=true" \
+            --label "traefik.http.routers.personance-http.rule=Host(\`personance-app.indiongo-ing.com\`)" \
+            --label "traefik.http.routers.personance-http.entrypoints=web" \
+            --label "traefik.http.routers.personance-https.rule=Host(\`personance-app.indiongo-ing.com\`)" \
+            --label "traefik.http.routers.personance-https.entrypoints=websecure" \
+            --label "traefik.http.routers.personance-https.tls.certresolver=myresolver" \
+            --label "traefik.http.services.personance.loadbalancer.server.port=3000" \
+            personance-app:latest
+          
+          echo "Cleaning up..."
+          rm -f /tmp/personance-app.tar.gz
+          docker image prune -f
+          
+          echo "Deployment completed!"
