@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client'
-import { AssetType, TransactionType, GoalType } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -87,14 +86,14 @@ async function main() {
       {
         userId: user.id,
         name: 'Primary Home',
-        type: AssetType.REAL_ESTATE,
+        type: 'REAL_ESTATE',
         value: 250000,
         growth: 5.2,
       },
       {
         userId: user.id,
         name: 'Emergency Fund',
-        type: AssetType.CASH_EQUIVALENTS,
+        type: 'CASH_EQUIVALENTS',
         value: 15000,
         growth: 0.5,
       },
@@ -119,7 +118,7 @@ main()
   .then(async () => {
     await prisma.$disconnect()
   })
-  .catch(async (e) => {
+  .catch(async _e => {
     await prisma.$disconnect()
     process.exit(1)
   })
