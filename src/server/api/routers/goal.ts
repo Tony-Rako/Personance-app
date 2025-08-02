@@ -322,8 +322,16 @@ export const goalRouter = createTRPCRouter({
 
       // Throttling mechanism: Only allow updates every 5 seconds per user
       const cacheKey = `passive_income_update_${userId}`
-      const lastUpdate = (globalThis as Record<string, Record<string, number>>)
-        .passiveIncomeCache?.[cacheKey]
+      const globalCache = globalThis as unknown as Record<
+        string,
+        Record<string, number>
+      >
+
+      if (!globalCache.passiveIncomeCache) {
+        globalCache.passiveIncomeCache = {}
+      }
+
+      const lastUpdate = globalCache.passiveIncomeCache[cacheKey]
       const now = Date.now()
 
       if (lastUpdate && now - lastUpdate < 5000) {
@@ -333,18 +341,7 @@ export const goalRouter = createTRPCRouter({
         return null
       }
 
-      // Initialize cache if it doesn't exist
-      if (
-        !(globalThis as Record<string, Record<string, number>>)
-          .passiveIncomeCache
-      ) {
-        ;(
-          globalThis as Record<string, Record<string, number>>
-        ).passiveIncomeCache = {}
-      }
-      ;(
-        globalThis as Record<string, Record<string, number>>
-      ).passiveIncomeCache[cacheKey] = now
+      globalCache.passiveIncomeCache[cacheKey] = now
 
       // Find or create passive income goal
       const passiveIncomeGoal = await ctx.prisma.financialGoal.findFirst({

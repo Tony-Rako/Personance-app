@@ -13,7 +13,7 @@ function removeUndefined<T extends Record<string, unknown>>(
   const result: Partial<T> = {}
   for (const [key, value] of Object.entries(obj)) {
     if (value !== undefined) {
-      result[key as keyof T] = value
+      result[key as keyof T] = value as T[keyof T]
     }
   }
   return result
@@ -157,8 +157,10 @@ export const onboardingRouter = createTRPCRouter({
         create: {
           userId: ctx.session.user.id,
           ...cleanedInput,
-        },
-        update: cleanedInput,
+        } as Parameters<typeof ctx.prisma.userProfile.upsert>[0]['create'],
+        update: cleanedInput as Parameters<
+          typeof ctx.prisma.userProfile.upsert
+        >[0]['update'],
       })
 
       return profile
@@ -181,8 +183,10 @@ export const onboardingRouter = createTRPCRouter({
             create: {
               userId,
               ...cleanedProfile,
-            },
-            update: cleanedProfile,
+            } as Parameters<typeof tx.userProfile.upsert>[0]['create'],
+            update: cleanedProfile as Parameters<
+              typeof tx.userProfile.upsert
+            >[0]['update'],
           })
 
           // 2. Create assets if provided
@@ -201,7 +205,12 @@ export const onboardingRouter = createTRPCRouter({
               data: input.liabilities.map(liability => ({
                 ...removeUndefined(liability),
                 userId,
-              })),
+              })) as {
+                userId: string
+                name: string
+                type: string
+                balance: number
+              }[],
             })
           }
 
