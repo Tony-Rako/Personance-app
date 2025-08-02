@@ -13,6 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky",
+    "postinstall": "prisma generate",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui"
