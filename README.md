@@ -2,7 +2,7 @@
 
 **Your Personal Finance Management Dashboard**
 
-The Personance dashboard application - a comprehensive personal finance management platform that helps you build wealth through proven Rich Dad Poor Dad principles. Track your income, manage budgets, analyze assets vs liabilities, and progress toward financial independence with powerful insights and educational tools.
+The Personance dashboard application - a comprehensive personal finance management platform that helps you build wealth. Track your income, manage budgets, analyze assets vs liabilities, and progress toward financial independence with powerful insights and educational tools.
 
 _Note: This is the dashboard application. The landing page is hosted separately._
 
@@ -162,51 +162,11 @@ Financial applications require robust testing for:
 - `npx prisma studio` - Open database admin interface
 - `npx prisma db push` - Apply schema changes to database
 
-## 🤖 AI-Powered Financial Development
+## 🤖 AI-Powered Development
 
-### What Claude Code Can Help You Build
-
-**Financial Features:**
-
-- _"Add a new budget category with spending limits and alerts"_
-- _"Create an investment portfolio tracker with performance metrics"_
-- _"Build a debt payoff calculator with different strategies"_
-- _"Add goal setting for emergency fund or retirement savings"_
-- _"Implement automatic transaction categorization"_
-
-**Rich Dad Poor Dad Features:**
-
-- _"Create a passive income goal tracker"_
-- _"Add cash flow quadrant analysis with recommendations"_
-- _"Build an asset acquisition planner"_
-- _"Implement financial education quizzes"_
-
-### Financial Component Development
-
-**Financial Forms:** _"Create a form for adding investment transactions"_
-
-- React Hook Form with financial validation
-- Zod schemas for monetary amounts
-- Currency formatting and validation
-- Transaction type selection
-
-**Data Visualization:** _"Add a chart showing expense trends over time"_
-
-- Recharts integration with financial data
-- Responsive chart design
-- Interactive tooltips with financial details
-- Export functionality for reports
-
-**Dashboard Widgets:** _"Create a net worth summary card"_
-
-- Real-time financial calculations
-- Progress indicators and trends
-- Color-coded financial health status
-- Drill-down navigation to details
+### Claude Code Can Help You Build 10x Faster -
 
 ## 🚀 Deployment
-
-### Recommended: Vercel + Neon Database
 
 **Database (Neon):**
 
@@ -216,8 +176,8 @@ Financial applications require robust testing for:
 
 **Application (Netlify):**
 
-1. Connect your GitHub repository to [Netlify](https://netlify.com/)
-2. Configure environment variables in Netlify dashboard
+1. Connect your GitHub repository to [Coolify](https://coolify.io/) + [VPS](https://hostinger.com/)
+2. Configure environment variables in Coolify dashboard
 3. Deploy automatically on every push to main branch
 
 **Environment Variables for Production:**
@@ -270,12 +230,6 @@ Financial data requires extra security considerations:
 2. Create a feature branch for your financial feature
 3. Ensure tests pass, especially financial calculations
 4. Submit a pull request with clear description of changes
-
-### Community
-
-- Share your financial success stories and use cases
-- Contribute financial education content and tips
-- Help improve Rich Dad Poor Dad principle implementations
 
 ---
 
