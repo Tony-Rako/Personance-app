@@ -26,33 +26,45 @@ interface BudgetFormData {
 interface BudgetCreateDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  budget?: {
+    id: string
+    name: string
+    totalAmount: number
+    startDate: Date
+    endDate: Date
+  }
 }
 
 export default function BudgetCreateDialog({
-  open: _open,
+  open,
   onOpenChange,
+  budget,
 }: BudgetCreateDialogProps) {
-  const [errors, setErrors] = useState<Record<string, string>>({})
-
   // Initialize with current month
   const currentDate = new Date()
   const defaultStartDate = startOfMonth(currentDate)
   const defaultEndDate = endOfMonth(currentDate)
 
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<BudgetFormData>({
-    name: `${format(currentDate, 'MMMM yyyy')} Budget`,
-    totalAmount: '',
-    startDate: format(defaultStartDate, 'yyyy-MM-dd'),
-    endDate: format(defaultEndDate, 'yyyy-MM-dd'),
+    name: budget?.name || `${format(currentDate, 'MMMM yyyy')} Budget`,
+    totalAmount: budget?.totalAmount || '',
+    startDate: budget
+      ? format(budget.startDate, 'yyyy-MM-dd')
+      : format(defaultStartDate, 'yyyy-MM-dd'),
+    endDate: budget
+      ? format(budget.endDate, 'yyyy-MM-dd')
+      : format(defaultEndDate, 'yyyy-MM-dd'),
   })
 
   const utils = trpc.useUtils()
+
   const createBudget = trpc.budget.create.useMutation({
     onSuccess: () => {
       utils.budget.getCurrent.invalidate()
       utils.budget.getAll.invalidate()
       onOpenChange(false)
-      // Reset form
+      // Reset form for next use
       setFormData({
         name: `${format(addMonths(currentDate, 1), 'MMMM yyyy')} Budget`,
         totalAmount: '',
@@ -68,6 +80,22 @@ export default function BudgetCreateDialog({
       setErrors({ submit: error.message })
     },
   })
+
+  const updateBudget = trpc.budget.update.useMutation({
+    onSuccess: () => {
+      utils.budget.getCurrent.invalidate()
+      utils.budget.getAll.invalidate()
+      onOpenChange(false)
+      setErrors({})
+    },
+    onError: error => {
+      setErrors({ submit: error.message })
+    },
+  })
+
+  if (!open) {
+    return null
+  }
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
@@ -118,12 +146,24 @@ export default function BudgetCreateDialog({
         ? parseFloat(formData.totalAmount)
         : formData.totalAmount
 
-    createBudget.mutate({
-      name: formData.name.trim(),
-      totalAmount: amount,
-      startDate: new Date(formData.startDate),
-      endDate: new Date(formData.endDate),
-    })
+    if (budget) {
+      // Edit mode
+      updateBudget.mutate({
+        id: budget.id,
+        name: formData.name.trim(),
+        totalAmount: amount,
+        startDate: new Date(formData.startDate),
+        endDate: new Date(formData.endDate),
+      })
+    } else {
+      // Create mode
+      createBudget.mutate({
+        name: formData.name.trim(),
+        totalAmount: amount,
+        startDate: new Date(formData.startDate),
+        endDate: new Date(formData.endDate),
+      })
+    }
   }
 
   const handleQuickFill = (months: number) => {
@@ -139,14 +179,16 @@ export default function BudgetCreateDialog({
   }
 
   return (
-    <Dialog open={true} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center space-x-2">
             <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
               <Calendar className="h-4 w-4 text-blue-600" />
             </div>
-            <DialogTitle>Create New Budget</DialogTitle>
+            <DialogTitle>
+              {budget ? 'Edit Budget' : 'Create New Budget'}
+            </DialogTitle>
           </div>
         </DialogHeader>
 
@@ -303,17 +345,23 @@ export default function BudgetCreateDialog({
               <Button
                 type="button"
                 variant="outline"
-                disabled={createBudget.isPending}
+                disabled={createBudget.isPending || updateBudget.isPending}
               >
                 Cancel
               </Button>
             </DialogClose>
             <Button
               type="submit"
-              disabled={createBudget.isPending}
+              disabled={createBudget.isPending || updateBudget.isPending}
               className="min-w-[100px]"
             >
-              {createBudget.isPending ? 'Creating...' : 'Create Budget'}
+              {budget
+                ? updateBudget.isPending
+                  ? 'Updating...'
+                  : 'Update Budget'
+                : createBudget.isPending
+                  ? 'Creating...'
+                  : 'Create Budget'}
             </Button>
           </DialogFooter>
         </form>

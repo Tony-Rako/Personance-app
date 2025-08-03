@@ -20,6 +20,13 @@ export default function BudgetOverview() {
   const { formatAmount } = useCurrencyFormat()
   const { summary, currentBudget, isLoading } = useBudgetSummary()
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [editingBudget, setEditingBudget] = useState<{
+    id: string
+    name: string
+    totalAmount: number
+    startDate: Date
+    endDate: Date
+  } | null>(null)
 
   if (isLoading) {
     return (
@@ -42,26 +49,42 @@ export default function BudgetOverview() {
 
   if (!currentBudget) {
     return (
-      <Card className="p-8 text-center">
-        <div className="max-w-md mx-auto">
-          <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Calendar className="h-8 w-8 text-blue-600" />
+      <>
+        <Card className="p-8 text-center">
+          <div className="max-w-md mx-auto">
+            <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Calendar className="h-8 w-8 text-blue-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Create Your First Budget
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Start taking control of your finances by creating a monthly
+              budget. Track your spending and stay on top of your financial
+              goals.
+            </p>
+            <Button size="lg" onClick={() => setShowCreateDialog(true)}>
+              Create Budget
+            </Button>
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            Create Your First Budget
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Start taking control of your finances by creating a monthly budget.
-            Track your spending and stay on top of your financial goals.
-          </p>
-          <Button size="lg" onClick={() => setShowCreateDialog(true)}>
-            Create Budget
-          </Button>
-        </div>
-      </Card>
+        </Card>
+
+        {/* Budget Create Dialog */}
+        <BudgetCreateDialog
+          open={showCreateDialog || !!editingBudget}
+          onOpenChange={open => {
+            if (!open) {
+              setShowCreateDialog(false)
+              setEditingBudget(null)
+            }
+          }}
+          {...(editingBudget && { budget: editingBudget })}
+        />
+      </>
     )
   }
 
+  console.log('About to calculate progress variables')
   const progressPercentage = Math.min(summary.progressPercentage, 100)
   const isOverBudget = summary.totalSpent > summary.totalBudgeted
   const daysInMonth = new Date(
@@ -73,6 +96,7 @@ export default function BudgetOverview() {
     (Date.now() - currentBudget.startDate.getTime()) / (1000 * 60 * 60 * 24)
   )
   const expectedSpendingRate = Math.min((daysElapsed / daysInMonth) * 100, 100)
+  console.log('Finished calculating progress variables, about to return JSX')
 
   return (
     <div className="space-y-6">
@@ -89,7 +113,19 @@ export default function BudgetOverview() {
             </p>
           </div>
           <div className="flex space-x-2">
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setEditingBudget({
+                  id: currentBudget.id,
+                  name: currentBudget.name,
+                  totalAmount: parseFloat(currentBudget.totalAmount.toString()),
+                  startDate: currentBudget.startDate,
+                  endDate: currentBudget.endDate,
+                })
+              }
+            >
               Edit Budget
             </Button>
             <Button
@@ -266,8 +302,14 @@ export default function BudgetOverview() {
 
       {/* Budget Create Dialog */}
       <BudgetCreateDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
+        open={showCreateDialog || !!editingBudget}
+        onOpenChange={open => {
+          if (!open) {
+            setShowCreateDialog(false)
+            setEditingBudget(null)
+          }
+        }}
+        {...(editingBudget && { budget: editingBudget })}
       />
     </div>
   )
