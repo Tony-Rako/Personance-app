@@ -3,12 +3,13 @@
 import React from 'react'
 import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { formatCurrency } from '@/lib/financial-utils'
 import { trpc } from '@/lib/trpc'
 import { useFinancialSummary } from '@/hooks/use-financial-summary'
+import { useCurrencyFormat } from '@/hooks/use-currency-format'
 import { TrendingUp, BookOpen, Users, Building, Briefcase } from 'lucide-react'
 
 function CashFlowQuadrant() {
+  const { formatAmount } = useCurrencyFormat()
   // Get real financial data
   const { summary: financialSummary } = useFinancialSummary()
   const { data: incomes } = trpc.income.getAll.useQuery()
@@ -160,7 +161,7 @@ function CashFlowQuadrant() {
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Income</span>
               <span className="font-medium">
-                {formatCurrency(employeeIncome)}
+                {formatAmount(employeeIncome)}
               </span>
             </div>
             <Progress value={employeePercentage} className="h-2" />
@@ -191,7 +192,7 @@ function CashFlowQuadrant() {
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Income</span>
               <span className="font-medium">
-                {formatCurrency(businessIncome)}
+                {formatAmount(businessIncome)}
               </span>
             </div>
             <Progress value={businessPercentage} className="h-2" />
@@ -222,7 +223,7 @@ function CashFlowQuadrant() {
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Income</span>
               <span className="font-medium">
-                {formatCurrency(selfEmployedIncome)}
+                {formatAmount(selfEmployedIncome)}
               </span>
             </div>
             <Progress value={selfEmployedPercentage} className="h-2" />
@@ -253,7 +254,7 @@ function CashFlowQuadrant() {
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Income</span>
               <span className="font-medium">
-                {formatCurrency(investorIncome)}
+                {formatAmount(investorIncome)}
               </span>
             </div>
             <Progress value={investorPercentage} className="h-2" />

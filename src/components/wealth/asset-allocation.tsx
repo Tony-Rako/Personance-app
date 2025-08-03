@@ -1,9 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { trpc } from '@/lib/trpc'
-import { formatCurrency, formatPercentage } from '@/lib/financial-utils'
+import { formatPercentage } from '@/lib/financial-utils'
+import { useCurrencyFormat } from '@/hooks/use-currency-format'
 import {
   Building,
   TrendingUp,
@@ -13,6 +15,8 @@ import {
   Plus,
 } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { AssetFormDialog } from '@/components/shared/asset-form-dialog'
+import { AssetType } from '@prisma/client'
 
 const ASSET_TYPE_CONFIG = {
   REAL_ESTATE: {
@@ -58,9 +62,17 @@ interface AssetTypeCardProps {
   value: number
   percentage: number
   count: number
+  onAddAsset: (assetType: AssetType) => void
 }
 
-function AssetTypeCard({ type, value, percentage, count }: AssetTypeCardProps) {
+function AssetTypeCard({
+  type,
+  value,
+  percentage,
+  count,
+  onAddAsset,
+}: AssetTypeCardProps) {
+  const { formatAmount } = useCurrencyFormat()
   const config = ASSET_TYPE_CONFIG[type]
 
   return (
@@ -80,7 +92,11 @@ function AssetTypeCard({ type, value, percentage, count }: AssetTypeCardProps) {
             </p>
           </div>
         </div>
-        <Button variant="ghost" size="sm">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onAddAsset(type as AssetType)}
+        >
           <Plus className="h-4 w-4" />
         </Button>
       </div>
@@ -88,7 +104,7 @@ function AssetTypeCard({ type, value, percentage, count }: AssetTypeCardProps) {
       <div className="space-y-2">
         <div className="flex justify-between items-center">
           <span className="text-lg font-bold text-gray-900">
-            {formatCurrency(value)}
+            {formatAmount(value)}
           </span>
           <span className="text-sm font-medium" style={{ color: config.color }}>
             {formatPercentage(percentage)}
@@ -117,6 +133,7 @@ interface CustomTooltipProps {
 }
 
 function AllocationChart({ data }: { data: ChartData[] }) {
+  const { formatAmount } = useCurrencyFormat()
   const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0]?.payload
@@ -125,7 +142,7 @@ function AllocationChart({ data }: { data: ChartData[] }) {
         <div className="bg-white p-3 border rounded-lg shadow-lg">
           <p className="font-medium text-gray-900">{data.name}</p>
           <p className="text-sm text-gray-600">
-            {formatCurrency(data.value)} ({formatPercentage(data.percentage)})
+            {formatAmount(data.value)} ({formatPercentage(data.percentage)})
           </p>
         </div>
       )
@@ -179,9 +196,20 @@ function AllocationChart({ data }: { data: ChartData[] }) {
 }
 
 export default function AssetAllocation() {
+  const { formatAmount } = useCurrencyFormat()
+  const [assetDialogOpen, setAssetDialogOpen] = useState(false)
+  const [selectedAssetType, setSelectedAssetType] = useState<AssetType>(
+    AssetType.INVESTMENTS
+  )
+
   const { data: portfolioData, isLoading } =
     trpc.asset.getPortfolioAllocation.useQuery()
   const { data: assets } = trpc.asset.getAll.useQuery()
+
+  const handleAddAsset = (assetType: AssetType) => {
+    setSelectedAssetType(assetType)
+    setAssetDialogOpen(true)
+  }
 
   if (isLoading) {
     return (
@@ -211,7 +239,10 @@ export default function AssetAllocation() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">Asset Allocation</h2>
-        <Button variant="outline">
+        <Button
+          variant="outline"
+          onClick={() => handleAddAsset(AssetType.INVESTMENTS)}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add Asset
         </Button>
@@ -228,6 +259,7 @@ export default function AssetAllocation() {
               value={allocationItem.value}
               percentage={allocationItem.percentage}
               count={allocationItem.count}
+              onAddAsset={handleAddAsset}
             />
           ))}
         </div>
@@ -250,7 +282,7 @@ export default function AssetAllocation() {
                   {config.label}
                 </h3>
                 <div className="text-2xl font-bold text-gray-900 mb-2">
-                  {formatCurrency(allocationItem.value)}
+                  {formatAmount(allocationItem.value)}
                 </div>
                 <div className="space-y-3">
                   {typeAssets.slice(0, 3).map(asset => (
@@ -266,7 +298,7 @@ export default function AssetAllocation() {
                       </div>
                       <div className="text-right">
                         <div className="text-sm font-medium text-gray-900">
-                          {formatCurrency(Number(asset.value))}
+                          {formatAmount(Number(asset.value))}
                         </div>
                         {asset.growth && (
                           <div
@@ -290,6 +322,13 @@ export default function AssetAllocation() {
           })}
         </div>
       )}
+
+      {/* Asset Form Dialog */}
+      <AssetFormDialog
+        open={assetDialogOpen}
+        onOpenChange={setAssetDialogOpen}
+        defaultType={selectedAssetType}
+      />
     </div>
   )
 }

@@ -6,15 +6,18 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import Link from 'next/link'
 
 export default function SignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
     setLoading(true)
 
     try {
@@ -26,9 +29,12 @@ export default function SignIn() {
 
       if (result?.ok) {
         router.push('/dashboard')
+      } else {
+        setError('Invalid email or password')
       }
     } catch (error: unknown) {
       console.error('Sign in error:', error)
+      setError('An unexpected error occurred')
     } finally {
       setLoading(false)
     }
@@ -74,6 +80,13 @@ export default function SignIn() {
               required
             />
           </div>
+
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign In'}
           </Button>
@@ -91,27 +104,29 @@ export default function SignIn() {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-3">
+          <div className="mt-6">
             <Button
               variant="outline"
               onClick={() => handleOAuthSignIn('google')}
               disabled={loading}
+              className="w-full"
             >
               Google
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleOAuthSignIn('github')}
-              disabled={loading}
-            >
-              GitHub
             </Button>
           </div>
         </div>
 
-        <p className="mt-8 text-center text-sm text-gray-600">
-          For demo purposes, you can sign in with any email and password.
-        </p>
+        <div className="mt-8 text-center">
+          <p className="text-sm text-gray-600">
+            Don&apos;t have an account?{' '}
+            <Link
+              href="/auth/signup"
+              className="font-medium text-blue-600 hover:text-blue-500"
+            >
+              Sign up
+            </Link>
+          </p>
+        </div>
       </Card>
     </div>
   )

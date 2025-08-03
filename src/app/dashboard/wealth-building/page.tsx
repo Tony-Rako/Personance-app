@@ -8,16 +8,17 @@ import LiabilityManager from '@/components/dashboard/liability-manager'
 import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import {
-  formatCurrency,
   calculatePassiveIncome,
   calculateEscapeRatRaceProgress,
 } from '@/lib/financial-utils'
 import { useFinancialSummary } from '@/hooks/use-financial-summary'
+import { useCurrencyFormat } from '@/hooks/use-currency-format'
 import { trpc } from '@/lib/trpc'
 import { DollarSign, CreditCard, Target } from 'lucide-react'
 import type { Income } from '@prisma/client'
 
 export default function WealthBuildingPage() {
+  const { formatAmount } = useCurrencyFormat()
   const [activeTab, setActiveTab] = useState<
     'overview' | 'income-expenses' | 'assets' | 'liabilities'
   >('overview')
@@ -148,8 +149,8 @@ export default function WealthBuildingPage() {
                       {passiveIncomeGoal.name}
                     </p>
                     <span className="text-sm text-gray-600">
-                      {formatCurrency(memoizedPassiveIncome)} /{' '}
-                      {formatCurrency(
+                      {formatAmount(memoizedPassiveIncome)} /{' '}
+                      {formatAmount(
                         parseFloat(passiveIncomeGoal.targetAmount.toString())
                       )}
                     </span>
@@ -187,8 +188,8 @@ export default function WealthBuildingPage() {
                       Passive Income vs Monthly Expenses
                     </p>
                     <span className="text-sm text-gray-600">
-                      {formatCurrency(memoizedPassiveIncome)} /{' '}
-                      {formatCurrency(monthlyExpenses)}
+                      {formatAmount(memoizedPassiveIncome)} /{' '}
+                      {formatAmount(monthlyExpenses)}
                     </span>
                   </div>
                   <Progress
@@ -222,13 +223,13 @@ export default function WealthBuildingPage() {
                 <div>
                   <p className="text-xs text-gray-600">TOTAL INCOME</p>
                   <p className="font-semibold text-green-600">
-                    {formatCurrency(financialSummary.totalIncome)}
+                    {formatAmount(financialSummary.totalIncome)}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-600">TOTAL EXPENSES</p>
                   <p className="font-semibold text-red-600">
-                    {formatCurrency(financialSummary.totalExpenses)}
+                    {formatAmount(financialSummary.totalExpenses)}
                   </p>
                 </div>
                 <div>
@@ -236,7 +237,7 @@ export default function WealthBuildingPage() {
                   <p
                     className={`font-semibold ${financialSummary.cashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}
                   >
-                    {formatCurrency(financialSummary.cashFlow, {
+                    {formatAmount(financialSummary.cashFlow, {
                       showSign: true,
                     })}
                   </p>
@@ -246,7 +247,7 @@ export default function WealthBuildingPage() {
                   <p
                     className={`font-semibold ${financialSummary.netWorth >= 0 ? 'text-green-600' : 'text-red-600'}`}
                   >
-                    {formatCurrency(financialSummary.netWorth, {
+                    {formatAmount(financialSummary.netWorth, {
                       showSign: true,
                     })}
                   </p>

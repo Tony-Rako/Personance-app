@@ -13,7 +13,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog'
 import { trpc } from '@/lib/trpc'
-import { formatCurrency } from '@/lib/financial-utils'
+import { useCurrencyFormat } from '@/hooks/use-currency-format'
 import { Plus, Trash2, Edit, TrendingUp } from 'lucide-react'
 import { AssetType, type Asset } from '@prisma/client'
 import type { AssetFormData } from '@/types/financial'
@@ -221,6 +221,7 @@ function AssetFormDialog({ open, onOpenChange, asset }: AssetFormDialogProps) {
 }
 
 export default function AssetManager() {
+  const { formatAmount } = useCurrencyFormat()
   const [showAssetDialog, setShowAssetDialog] = useState(false)
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null)
 
@@ -280,7 +281,7 @@ export default function AssetManager() {
             <h3 className="text-lg font-semibold text-gray-900">Assets</h3>
             {totalValue && (
               <p className="text-sm text-gray-600">
-                Total Value: {formatCurrency(totalValue)}
+                Total Value: {formatAmount(totalValue)}
               </p>
             )}
           </div>
@@ -336,7 +337,7 @@ export default function AssetManager() {
                       </span>
                     </div>
                     <p className="text-lg font-semibold text-gray-900 mb-1">
-                      {formatCurrency(value)}
+                      {formatAmount(value)}
                     </p>
                     {gain !== null && (
                       <div className="flex items-center space-x-2 text-sm">
@@ -345,7 +346,7 @@ export default function AssetManager() {
                             gain >= 0 ? 'text-green-600' : 'text-red-600'
                           }
                         >
-                          {formatCurrency(gain, { showSign: true })}
+                          {formatAmount(gain, { showSign: true })}
                         </span>
                         {gainPercentage !== null && (
                           <span

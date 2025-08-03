@@ -6,7 +6,7 @@ import AssetAllocation from '@/components/wealth/asset-allocation'
 import CashEquivalents from '@/components/wealth/cash-equivalents'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { formatCurrency } from '@/lib/financial-utils'
+import { useCurrencyFormat } from '@/hooks/use-currency-format'
 import {
   LineChart,
   Line,
@@ -21,6 +21,7 @@ import { trpc } from '@/lib/trpc'
 import { useAutoSnapshot } from '@/hooks/use-auto-snapshot'
 
 function PerformanceMetrics() {
+  const { formatAmount } = useCurrencyFormat()
   const { data: performanceData } =
     trpc.networth.getPerformanceMetrics.useQuery()
   const { data: goals } = trpc.goal.getAll.useQuery()
@@ -73,7 +74,7 @@ function PerformanceMetrics() {
                 {performanceData.yearlyGrowth.toFixed(2)}%
               </div>
               <div className="text-xs text-gray-500">
-                ({formatCurrency(performanceData.yearlyGrowthAmount)})
+                ({formatAmount(performanceData.yearlyGrowthAmount)})
               </div>
             </div>
           </div>
@@ -108,7 +109,7 @@ function PerformanceMetrics() {
             ></div>
           </div>
           <div className="text-sm text-gray-600">
-            Progress toward financial freedom goal of {formatCurrency(fiTarget)}
+            Progress toward financial freedom goal of {formatAmount(fiTarget)}
           </div>
         </div>
       </Card>
@@ -117,6 +118,7 @@ function PerformanceMetrics() {
 }
 
 function NetWorthChart() {
+  const { formatAmount } = useCurrencyFormat()
   const [period, setPeriod] = useState<'6M' | '1Y' | 'ALL'>('6M')
   const { data: historyData, isLoading } =
     trpc.networth.getNetWorthHistory.useQuery({ period })
@@ -151,6 +153,10 @@ function NetWorthChart() {
       })
     ) || []
 
+  // Check if we have insufficient data for meaningful trends
+  const hasInsufficientData = data.length < 2
+  const hasLimitedData = data.length < 5
+
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -181,29 +187,63 @@ function NetWorthChart() {
         </div>
       </div>
 
-      <div className="h-80">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" />
-            <YAxis tickFormatter={value => `$${(value / 1000).toFixed(0)}k`} />
-            <Tooltip
-              formatter={(value: number) => [
-                formatCurrency(value),
-                'Net Worth',
-              ]}
-              labelFormatter={label => `Month: ${label}`}
-            />
-            <Line
-              type="monotone"
-              dataKey="netWorth"
-              stroke="#3B82F6"
-              strokeWidth={3}
-              dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      {hasInsufficientData ? (
+        <div className="h-80 flex items-center justify-center bg-gray-50 rounded-lg">
+          <div className="text-center p-8">
+            <div className="text-gray-400 mb-4">
+              <TrendingUp className="h-12 w-12 mx-auto" />
+            </div>
+            <h4 className="text-lg font-medium text-gray-600 mb-2">
+              Building Your Wealth History
+            </h4>
+            <p className="text-gray-500 mb-4 max-w-sm">
+              Your wealth tracking journey has begun! Visit this page regularly
+              to build historical data and see meaningful trends over time.
+            </p>
+            <p className="text-sm text-gray-400">
+              Period buttons will become functional once you have multiple
+              snapshots
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis
+                  tickFormatter={value => `$${(value / 1000).toFixed(0)}k`}
+                />
+                <Tooltip
+                  formatter={(value: number) => [
+                    formatAmount(value),
+                    'Net Worth',
+                  ]}
+                  labelFormatter={label => `Month: ${label}`}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="netWorth"
+                  stroke="#3B82F6"
+                  strokeWidth={3}
+                  dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          {hasLimitedData && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-700">
+                <span className="font-medium">Growing your data:</span> You have{' '}
+                {data.length} data points. Continue tracking to see richer
+                trends and more meaningful period comparisons.
+              </p>
+            </div>
+          )}
+        </>
+      )}
     </Card>
   )
 }

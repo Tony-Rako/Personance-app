@@ -1,13 +1,11 @@
 import { useMemo } from 'react'
 import { trpc } from '@/lib/trpc'
-import {
-  calculateNetWorth,
-  calculateCashFlow,
-  formatCurrency,
-} from '@/lib/financial-utils'
+import { calculateNetWorth, calculateCashFlow } from '@/lib/financial-utils'
+import { useCurrencyFormat } from '@/hooks/use-currency-format'
 import type { FinancialSummary, BudgetSummary } from '@/types/financial'
 
 export const useFinancialSummary = () => {
+  const { formatAmount } = useCurrencyFormat()
   const { isLoading: incomesLoading } = trpc.income.getAll.useQuery()
   const { isLoading: expensesLoading } = trpc.expense.getAll.useQuery()
   const { data: totalAssets, isLoading: assetsLoading } =
@@ -73,18 +71,19 @@ export const useFinancialSummary = () => {
     summary,
     isLoading,
     formattedSummary: {
-      totalIncome: formatCurrency(summary.totalIncome),
-      totalExpenses: formatCurrency(summary.totalExpenses),
-      cashFlow: formatCurrency(summary.cashFlow, { showSign: true }),
-      totalAssets: formatCurrency(summary.totalAssets),
-      totalLiabilities: formatCurrency(summary.totalLiabilities),
-      netWorth: formatCurrency(summary.netWorth, { showSign: true }),
-      monthlyChange: formatCurrency(summary.monthlyChange, { showSign: true }),
+      totalIncome: formatAmount(summary.totalIncome),
+      totalExpenses: formatAmount(summary.totalExpenses),
+      cashFlow: formatAmount(summary.cashFlow, { showSign: true }),
+      totalAssets: formatAmount(summary.totalAssets),
+      totalLiabilities: formatAmount(summary.totalLiabilities),
+      netWorth: formatAmount(summary.netWorth, { showSign: true }),
+      monthlyChange: formatAmount(summary.monthlyChange, { showSign: true }),
     },
   }
 }
 
 export const useBudgetSummary = () => {
+  const { formatAmount } = useCurrencyFormat()
   const { data: currentBudget, isLoading } = trpc.budget.getCurrent.useQuery()
 
   const summary: BudgetSummary = useMemo(() => {
@@ -132,9 +131,9 @@ export const useBudgetSummary = () => {
     isLoading,
     currentBudget,
     formattedSummary: {
-      totalBudgeted: formatCurrency(summary.totalBudgeted),
-      totalSpent: formatCurrency(summary.totalSpent),
-      remaining: formatCurrency(summary.remaining),
+      totalBudgeted: formatAmount(summary.totalBudgeted),
+      totalSpent: formatAmount(summary.totalSpent),
+      remaining: formatAmount(summary.remaining),
     },
   }
 }

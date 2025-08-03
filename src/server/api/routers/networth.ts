@@ -151,44 +151,30 @@ export const netWorthRouter = createTRPCRouter({
     )
     const netWorth = totalAssets - totalLiabilities
 
-    // Check if snapshot already exists for today
+    // Use upsert to atomically create or update snapshot for today
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    const existingSnapshot = await ctx.prisma.netWorthSnapshot.findFirst({
+    return await ctx.prisma.netWorthSnapshot.upsert({
       where: {
-        userId,
-        date: {
-          gte: today,
-          lt: new Date(today.getTime() + 24 * 60 * 60 * 1000), // Next day
-        },
-      },
-    })
-
-    if (existingSnapshot) {
-      // Update existing snapshot
-      return await ctx.prisma.netWorthSnapshot.update({
-        where: {
-          id: existingSnapshot.id,
-        },
-        data: {
-          totalAssets,
-          totalLiabilities,
-          netWorth,
-        },
-      })
-    } else {
-      // Create new snapshot
-      return await ctx.prisma.netWorthSnapshot.create({
-        data: {
+        userId_date: {
           userId,
           date: today,
-          totalAssets,
-          totalLiabilities,
-          netWorth,
         },
-      })
-    }
+      },
+      update: {
+        totalAssets,
+        totalLiabilities,
+        netWorth,
+      },
+      create: {
+        userId,
+        date: today,
+        totalAssets,
+        totalLiabilities,
+        netWorth,
+      },
+    })
   }),
 
   // Get net worth performance metrics

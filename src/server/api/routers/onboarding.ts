@@ -56,7 +56,7 @@ const userProfileSchema = z.object({
     .optional(),
   primaryFinancialGoals: z.array(z.string()).optional(),
   financialConcerns: z.array(z.string()).optional(),
-  preferredCurrency: z.string().default('USD'),
+  preferredCurrency: z.string().default('EUR'),
   notificationsEnabled: z.boolean().default(true),
 })
 
@@ -231,14 +231,26 @@ export const onboardingRouter = createTRPCRouter({
           })
 
           if (existingGoals === 0) {
+            // Calculate monthly expenses target for rat race goal
+            let monthlyExpensesTarget = 5000 // Default fallback amount
+
+            if (input.monthlyExpenses && input.monthlyExpenses.length > 0) {
+              monthlyExpensesTarget = input.monthlyExpenses.reduce(
+                (sum, expense) => {
+                  return sum + expense.amount
+                },
+                0
+              )
+            }
+
             await tx.financialGoal.create({
               data: {
                 userId,
                 name: 'Escape the Rat Race',
                 type: 'RETIREMENT',
-                targetAmount: 1000000, // Default $1M target
+                targetAmount: monthlyExpensesTarget,
                 description:
-                  'Achieve financial freedom and escape the traditional 9-5 work cycle through smart investing and wealth building.',
+                  'Generate passive income equal to your monthly expenses to achieve financial freedom and escape the traditional 9-5 work cycle.',
               },
             })
           }

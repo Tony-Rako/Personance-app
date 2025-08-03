@@ -13,7 +13,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog'
 import { trpc } from '@/lib/trpc'
-import { formatCurrency } from '@/lib/financial-utils'
+import { useCurrencyFormat } from '@/hooks/use-currency-format'
 import { Plus, Target, Trash2, Edit, DollarSign } from 'lucide-react'
 import { GoalFormDialog } from './goal-form'
 import { GoalType, type FinancialGoal } from '@prisma/client'
@@ -50,6 +50,7 @@ function UpdateProgressDialog({
   onOpenChange,
   goal,
 }: UpdateProgressDialogProps) {
+  const { formatAmount } = useCurrencyFormat()
   const [amount, setAmount] = useState(0)
 
   const utils = trpc.useUtils()
@@ -85,8 +86,8 @@ function UpdateProgressDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <p className="text-sm text-gray-600 mb-2">
-              Current: {formatCurrency(goal.currentAmount)} / Target:{' '}
-              {formatCurrency(goal.targetAmount)}
+              Current: {formatAmount(goal.currentAmount)} / Target:{' '}
+              {formatAmount(goal.targetAmount)}
             </p>
             <label className="block text-sm font-medium mb-1">New Amount</label>
             <Input
@@ -115,6 +116,7 @@ function UpdateProgressDialog({
 }
 
 export default function GoalManager() {
+  const { formatAmount } = useCurrencyFormat()
   const [showGoalDialog, setShowGoalDialog] = useState(false)
   const [showProgressDialog, setShowProgressDialog] = useState(false)
   const [editingGoal, setEditingGoal] = useState<EditGoal | null>(null)
@@ -260,8 +262,24 @@ export default function GoalManager() {
                       )}
                     </div>
                     <p className="text-sm text-gray-600 mb-2">
-                      {formatCurrency(currentAmount)} /{' '}
-                      {formatCurrency(targetAmount)}
+                      {goal.name.toLowerCase().includes('rat race') ||
+                      goal.name.toLowerCase().includes('passive income') ||
+                      goal.name.toLowerCase().includes('financial freedom') ? (
+                        <span>
+                          <span className="font-medium">Passive Income:</span>{' '}
+                          {formatAmount(currentAmount)} /
+                          <span className="font-medium">
+                            {' '}
+                            Monthly Expenses:
+                          </span>{' '}
+                          {formatAmount(targetAmount)}
+                        </span>
+                      ) : (
+                        <span>
+                          {formatAmount(currentAmount)} /{' '}
+                          {formatAmount(targetAmount)}
+                        </span>
+                      )}
                     </p>
                     {goal.targetDate && (
                       <p className="text-xs text-gray-500">
@@ -307,9 +325,26 @@ export default function GoalManager() {
                 {/* Progress Bar */}
                 <div className="space-y-1">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Progress</span>
-                    <span className="font-medium">
+                    <span className="text-gray-600">
+                      {goal.name.toLowerCase().includes('rat race') ||
+                      goal.name.toLowerCase().includes('passive income') ||
+                      goal.name.toLowerCase().includes('financial freedom')
+                        ? 'Financial Freedom'
+                        : 'Progress'}
+                    </span>
+                    <span
+                      className={`font-medium ${
+                        progressPercentage >= 100 ? 'text-green-600' : ''
+                      }`}
+                    >
                       {Math.min(progressPercentage, 100).toFixed(1)}%
+                      {(goal.name.toLowerCase().includes('rat race') ||
+                        goal.name.toLowerCase().includes('passive income') ||
+                        goal.name
+                          .toLowerCase()
+                          .includes('financial freedom')) &&
+                        progressPercentage >= 100 &&
+                        ' 🎉'}
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
@@ -329,6 +364,29 @@ export default function GoalManager() {
                 {goal.description && (
                   <p className="text-sm text-gray-600 mt-2 italic">
                     {goal.description}
+                  </p>
+                )}
+
+                {/* Special message for rat race goal */}
+                {(goal.name.toLowerCase().includes('rat race') ||
+                  goal.name.toLowerCase().includes('passive income') ||
+                  goal.name.toLowerCase().includes('financial freedom')) && (
+                  <p
+                    className={`text-xs mt-2 ${
+                      progressPercentage >= 100
+                        ? 'text-green-600 font-medium'
+                        : 'text-gray-500'
+                    }`}
+                  >
+                    {progressPercentage >= 100
+                      ? "🎉 Congratulations! You've achieved financial freedom!"
+                      : progressPercentage >= 75
+                        ? 'Almost there! Financial freedom is within reach.'
+                        : progressPercentage >= 50
+                          ? 'Great progress! Keep building passive income.'
+                          : progressPercentage >= 25
+                            ? 'Good start! Focus on creating passive income streams.'
+                            : 'Start building passive income to escape the rat race.'}
                   </p>
                 )}
               </div>

@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { trpc } from '@/lib/trpc'
 import { useToast } from '@/hooks/use-toast'
+import { useCurrency } from '@/contexts/currency-context'
 import { Loader2 } from 'lucide-react'
 
 const preferencesSchema = z.object({
@@ -37,6 +38,7 @@ const currencyOptions = [
 
 export function PreferencesSettings() {
   const { toast } = useToast()
+  const { updateCurrency } = useCurrency()
 
   // Get user profile data
   const { data: profile, isLoading } = trpc.onboarding.getUserProfile.useQuery()
@@ -64,6 +66,7 @@ export function PreferencesSettings() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { isDirty },
   } = useForm<PreferencesFormData>({
     resolver: zodResolver(preferencesSchema),
@@ -76,18 +79,25 @@ export function PreferencesSettings() {
   // Load profile data into form when available
   useEffect(() => {
     if (profile) {
-      setValue('preferredCurrency', profile.preferredCurrency || 'USD')
-      setValue('notificationsEnabled', profile.notificationsEnabled ?? true)
+      reset({
+        preferredCurrency: profile.preferredCurrency || 'USD',
+        notificationsEnabled: profile.notificationsEnabled ?? true,
+      })
     }
-  }, [profile, setValue])
+  }, [profile, reset])
 
   const onSubmit = async (data: PreferencesFormData) => {
     // Preserve existing profile data while updating preferences
+    const newCurrency = data.preferredCurrency || 'USD'
+
     await updateProfile.mutateAsync({
       ...profile,
-      preferredCurrency: data.preferredCurrency || 'USD',
+      preferredCurrency: newCurrency,
       notificationsEnabled: data.notificationsEnabled ?? true,
     })
+
+    // Update currency context to immediately reflect changes throughout the app
+    updateCurrency(newCurrency)
   }
 
   if (isLoading) {
@@ -109,7 +119,9 @@ export function PreferencesSettings() {
             <Label>Preferred Currency</Label>
             <Select
               value={watch('preferredCurrency') || 'USD'}
-              onValueChange={value => setValue('preferredCurrency', value)}
+              onValueChange={value =>
+                setValue('preferredCurrency', value, { shouldDirty: true })
+              }
             >
               <SelectTrigger className="w-full md:w-64">
                 <SelectValue placeholder="Select currency" />
@@ -150,7 +162,7 @@ export function PreferencesSettings() {
             <Switch
               checked={watch('notificationsEnabled') ?? true}
               onCheckedChange={checked =>
-                setValue('notificationsEnabled', checked)
+                setValue('notificationsEnabled', checked, { shouldDirty: true })
               }
             />
           </div>

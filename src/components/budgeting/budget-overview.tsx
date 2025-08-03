@@ -4,7 +4,8 @@ import React, { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useBudgetSummary } from '@/hooks/use-financial-summary'
-import { formatCurrency, formatPercentage } from '@/lib/financial-utils'
+import { formatPercentage } from '@/lib/financial-utils'
+import { useCurrencyFormat } from '@/hooks/use-currency-format'
 import BudgetCreateDialog from './budget-create-dialog'
 import {
   Calendar,
@@ -16,6 +17,7 @@ import {
 import { format } from 'date-fns'
 
 export default function BudgetOverview() {
+  const { formatAmount } = useCurrencyFormat()
   const { summary, currentBudget, isLoading } = useBudgetSummary()
   const [showCreateDialog, setShowCreateDialog] = useState(false)
 
@@ -127,7 +129,7 @@ export default function BudgetOverview() {
               <AlertTriangle className="h-4 w-4" />
               <span className="text-sm">
                 Over budget by{' '}
-                {formatCurrency(summary.totalSpent - summary.totalBudgeted)}
+                {formatAmount(summary.totalSpent - summary.totalBudgeted)}
               </span>
             </div>
           )}
@@ -138,7 +140,7 @@ export default function BudgetOverview() {
           <div className="text-center">
             <p className="text-sm text-gray-600 mb-1">Total Budgeted</p>
             <p className="text-2xl font-bold text-gray-900">
-              {formatCurrency(summary.totalBudgeted)}
+              {formatAmount(summary.totalBudgeted)}
             </p>
           </div>
           <div className="text-center">
@@ -146,7 +148,7 @@ export default function BudgetOverview() {
             <p
               className={`text-2xl font-bold ${isOverBudget ? 'text-red-600' : 'text-gray-900'}`}
             >
-              {formatCurrency(summary.totalSpent)}
+              {formatAmount(summary.totalSpent)}
             </p>
           </div>
           <div className="text-center">
@@ -156,7 +158,7 @@ export default function BudgetOverview() {
                 summary.remaining > 0 ? 'text-green-600' : 'text-red-600'
               }`}
             >
-              {formatCurrency(summary.remaining)}
+              {formatAmount(summary.remaining)}
             </p>
           </div>
         </div>
@@ -253,7 +255,7 @@ export default function BudgetOverview() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Average daily spend</span>
               <span className="font-medium text-gray-900">
-                {formatCurrency(
+                {formatAmount(
                   daysElapsed > 0 ? summary.totalSpent / daysElapsed : 0
                 )}
               </span>

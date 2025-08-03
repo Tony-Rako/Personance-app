@@ -13,7 +13,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog'
 import { trpc } from '@/lib/trpc'
-import { formatCurrency } from '@/lib/financial-utils'
+import { useCurrencyFormat } from '@/hooks/use-currency-format'
 import { Plus, Trash2, Edit, CreditCard, AlertTriangle } from 'lucide-react'
 import type { Liability } from '@prisma/client'
 import type { LiabilityFormData } from '@/types/financial'
@@ -261,6 +261,7 @@ function LiabilityFormDialog({
 }
 
 export default function LiabilityManager() {
+  const { formatAmount } = useCurrencyFormat()
   const [showLiabilityDialog, setShowLiabilityDialog] = useState(false)
   const [editingLiability, setEditingLiability] = useState<Liability | null>(
     null
@@ -326,7 +327,7 @@ export default function LiabilityManager() {
             <h3 className="text-lg font-semibold text-gray-900">Liabilities</h3>
             {totalBalance && (
               <p className="text-sm text-gray-600">
-                Total Balance: {formatCurrency(totalBalance)}
+                Total Balance: {formatAmount(totalBalance)}
               </p>
             )}
           </div>
@@ -383,7 +384,7 @@ export default function LiabilityManager() {
                       </span>
                     </div>
                     <p className="text-lg font-semibold text-red-600 mb-1">
-                      {formatCurrency(balance)}
+                      {formatAmount(balance)}
                     </p>
 
                     <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
@@ -401,7 +402,7 @@ export default function LiabilityManager() {
                             Min Payment:
                           </span>
                           <p className="font-medium">
-                            {formatCurrency(minimumPayment)}
+                            {formatAmount(minimumPayment)}
                           </p>
                         </div>
                       )}
@@ -411,7 +412,7 @@ export default function LiabilityManager() {
                             Monthly Interest:
                           </span>
                           <p className="font-medium text-red-600">
-                            {formatCurrency(monthlyInterest)}
+                            {formatAmount(monthlyInterest)}
                           </p>
                         </div>
                       )}

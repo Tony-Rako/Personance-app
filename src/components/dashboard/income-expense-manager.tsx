@@ -13,7 +13,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog'
 import { trpc } from '@/lib/trpc'
-import { formatCurrency } from '@/lib/financial-utils'
+import { useCurrencyFormat } from '@/hooks/use-currency-format'
 import { Plus, Trash2, DollarSign, CreditCard } from 'lucide-react'
 import type { IncomeFormData, ExpenseFormData } from '@/types/financial'
 
@@ -235,6 +235,7 @@ function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) {
 }
 
 export default function IncomeExpenseManager() {
+  const { formatAmount } = useCurrencyFormat()
   const [showIncomeDialog, setShowIncomeDialog] = useState(false)
   const [showExpenseDialog, setShowExpenseDialog] = useState(false)
 
@@ -298,7 +299,7 @@ export default function IncomeExpenseManager() {
                 <div>
                   <p className="font-medium text-gray-900">{income.source}</p>
                   <p className="text-sm text-gray-600">
-                    {formatCurrency(parseFloat(income.amount.toString()))} /{' '}
+                    {formatAmount(parseFloat(income.amount.toString()))} /{' '}
                     {income.frequency}
                   </p>
                 </div>
@@ -362,7 +363,7 @@ export default function IncomeExpenseManager() {
                     {expense.category}
                   </p>
                   <p className="text-sm text-gray-600">
-                    {formatCurrency(parseFloat(expense.amount.toString()))} /{' '}
+                    {formatAmount(parseFloat(expense.amount.toString()))} /{' '}
                     {expense.frequency}
                   </p>
                 </div>

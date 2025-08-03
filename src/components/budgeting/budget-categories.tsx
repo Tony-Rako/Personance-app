@@ -14,10 +14,10 @@ import {
 } from '@/components/ui/dialog'
 import { trpc } from '@/lib/trpc'
 import {
-  formatCurrency,
   formatPercentage,
   calculateBudgetProgress,
 } from '@/lib/financial-utils'
+import { useCurrencyFormat } from '@/hooks/use-currency-format'
 import {
   Plus,
   Edit2,
@@ -290,6 +290,7 @@ interface CategoryCardProps {
 }
 
 function CategoryCard({ category, budgetEndDate, onEdit }: CategoryCardProps) {
+  const { formatAmount } = useCurrencyFormat()
   const allocated = parseFloat(category.allocatedAmount.toString())
   const spent = parseFloat(category.spentAmount.toString())
   const remaining = allocated - spent
@@ -382,17 +383,17 @@ function CategoryCard({ category, budgetEndDate, onEdit }: CategoryCardProps) {
               isOverBudget ? 'text-red-600 font-medium' : 'text-gray-900'
             }
           >
-            {formatCurrency(spent)}
+            {formatAmount(spent)}
           </span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-gray-600">Budget</span>
-          <span className="text-gray-900">{formatCurrency(allocated)}</span>
+          <span className="text-gray-900">{formatAmount(allocated)}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-gray-600">Remaining</span>
           <span className={remaining >= 0 ? 'text-green-600' : 'text-red-600'}>
-            {formatCurrency(remaining)}
+            {formatAmount(remaining)}
           </span>
         </div>
       </div>

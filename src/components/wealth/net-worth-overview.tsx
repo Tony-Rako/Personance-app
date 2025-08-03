@@ -2,11 +2,8 @@
 
 import { Card } from '@/components/ui/card'
 import { trpc } from '@/lib/trpc'
-import {
-  formatCurrency,
-  formatPercentage,
-  calculateNetWorth,
-} from '@/lib/financial-utils'
+import { formatPercentage, calculateNetWorth } from '@/lib/financial-utils'
+import { useCurrencyFormat } from '@/hooks/use-currency-format'
 import {
   TrendingUp,
   TrendingDown,
@@ -68,6 +65,7 @@ function MetricCard({
 }
 
 export default function NetWorthOverview() {
+  const { formatAmount } = useCurrencyFormat()
   const { data: totalAssets, isLoading: assetsLoading } =
     trpc.asset.getTotalValue.useQuery()
   const { data: totalLiabilities, isLoading: liabilitiesLoading } =
@@ -114,22 +112,22 @@ export default function NetWorthOverview() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total Assets"
-          value={formatCurrency(assets)}
+          value={formatAmount(assets)}
           icon={<Building className="h-6 w-6 text-white" />}
           color="bg-green-100 text-green-600"
         />
 
         <MetricCard
           title="Total Liabilities"
-          value={formatCurrency(liabilities)}
+          value={formatAmount(liabilities)}
           icon={<DollarSign className="h-6 w-6 text-white" />}
           color="bg-red-100 text-red-600"
         />
 
         <MetricCard
           title="Net Worth"
-          value={formatCurrency(netWorth)}
-          change={formatCurrency(monthlyChange, { showSign: true })}
+          value={formatAmount(netWorth)}
+          change={formatAmount(monthlyChange, { showSign: true })}
           changeType={monthlyChange >= 0 ? 'positive' : 'negative'}
           icon={<TrendingUp className="h-6 w-6 text-white" />}
           color="bg-blue-100 text-blue-600"
@@ -158,24 +156,6 @@ export default function NetWorthOverview() {
             <div className="text-gray-600 mb-1">($22,000)</div>
             <div className="text-sm text-gray-500">
               Year-over-year change in net worth
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Financial Independence
-          </h3>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600 mb-2">35%</div>
-            <div className="text-gray-600 mb-1">
-              Progress toward financial freedom goal of $400,000
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
-              <div
-                className="bg-blue-600 h-2 rounded-full"
-                style={{ width: '35%' }}
-              ></div>
             </div>
           </div>
         </Card>

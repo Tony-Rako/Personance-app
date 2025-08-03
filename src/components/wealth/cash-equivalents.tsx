@@ -1,10 +1,22 @@
 'use client'
 
+import { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { formatCurrency, formatPercentage } from '@/lib/financial-utils'
-import { Plus, Wallet, PiggyBank, Building2, TrendingUp } from 'lucide-react'
+import { formatPercentage } from '@/lib/financial-utils'
+import { useCurrencyFormat } from '@/hooks/use-currency-format'
+import {
+  Plus,
+  Wallet,
+  PiggyBank,
+  Building2,
+  TrendingUp,
+  ArrowUpRight,
+  Target,
+} from 'lucide-react'
 import { trpc } from '@/lib/trpc'
+import { AssetFormDialog } from '@/components/shared/asset-form-dialog'
+import { AssetType } from '@prisma/client'
 
 interface CashAccountProps {
   name: string
@@ -23,6 +35,7 @@ function CashAccountCard({
   icon,
   type,
 }: CashAccountProps) {
+  const { formatAmount } = useCurrencyFormat()
   const getTypeColor = () => {
     switch (type) {
       case 'emergency':
@@ -52,7 +65,7 @@ function CashAccountCard({
       <div className="space-y-2">
         <div className="flex justify-between items-center">
           <span className="text-xl font-bold text-gray-900">
-            {formatCurrency(value)}
+            {formatAmount(value)}
           </span>
           <div className="flex items-center space-x-1">
             {growth !== 0 && (
@@ -76,8 +89,40 @@ function CashAccountCard({
 }
 
 export default function CashEquivalents() {
+  const { formatAmount } = useCurrencyFormat()
+  const [assetDialogOpen, setAssetDialogOpen] = useState(false)
+  const [dialogType, setDialogType] = useState<
+    'cash' | 'investment' | 'emergency'
+  >('cash')
+
   const { data: assets, isLoading } = trpc.asset.getAll.useQuery()
   const { data: expenses } = trpc.expense.getAll.useQuery()
+
+  // Helper function to get dialog configuration based on type
+  const getDialogConfig = () => {
+    switch (dialogType) {
+      case 'cash':
+        return {
+          defaultType: AssetType.CASH_EQUIVALENTS,
+          title: 'Add Cash Account',
+        }
+      case 'investment':
+        return {
+          defaultType: AssetType.INVESTMENTS,
+          title: 'Add Investment',
+        }
+      case 'emergency':
+        return {
+          defaultType: AssetType.CASH_EQUIVALENTS,
+          title: 'Add Emergency Fund',
+        }
+      default:
+        return {
+          defaultType: AssetType.CASH_EQUIVALENTS,
+          title: 'Add Asset',
+        }
+    }
+  }
 
   if (isLoading) {
     return (
@@ -159,11 +204,17 @@ export default function CashEquivalents() {
           <h2 className="text-xl font-bold text-gray-900">
             Cash & Equivalents
           </h2>
-          <p className="text-gray-600">Total: {formatCurrency(totalCash)}</p>
+          <p className="text-gray-600">Total: {formatAmount(totalCash)}</p>
         </div>
-        <Button variant="outline">
+        <Button
+          variant="outline"
+          onClick={() => {
+            setDialogType('cash')
+            setAssetDialogOpen(true)
+          }}
+        >
           <Plus className="h-4 w-4 mr-2" />
-          Add Asset
+          Add Cash Account
         </Button>
       </div>
 
@@ -191,13 +242,13 @@ export default function CashEquivalents() {
             <div className="flex justify-between">
               <span className="text-gray-600">Current Amount</span>
               <span className="font-medium">
-                {formatCurrency(emergencyAmount)}
+                {formatAmount(emergencyAmount)}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Recommended (6 months)</span>
               <span className="font-medium">
-                {formatCurrency(recommendedAmount)}
+                {formatAmount(recommendedAmount)}
               </span>
             </div>
             <div className="flex justify-between">
@@ -218,7 +269,7 @@ export default function CashEquivalents() {
               {emergencyProgress >= 100
                 ? "Excellent! You've reached your emergency fund goal."
                 : emergencyProgress >= 50
-                  ? `You're on track. Consider adding ${formatCurrency(recommendedAmount - emergencyAmount)} more.`
+                  ? `You're on track. Consider adding ${formatAmount(recommendedAmount - emergencyAmount)} more.`
                   : 'Focus on building your emergency fund to 3-6 months of expenses.'}
             </p>
           </div>
@@ -232,13 +283,13 @@ export default function CashEquivalents() {
             <div className="flex justify-between">
               <span className="text-gray-600">Total Cash Assets</span>
               <span className="font-medium text-blue-600">
-                {formatCurrency(totalCash)}
+                {formatAmount(totalCash)}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Monthly Expenses</span>
               <span className="font-medium text-gray-900">
-                {formatCurrency(monthlyExpenses)}
+                {formatAmount(monthlyExpenses)}
               </span>
             </div>
             <div className="flex justify-between">
@@ -271,20 +322,49 @@ export default function CashEquivalents() {
           Quick Actions
         </h3>
         <div className="grid gap-3 md:grid-cols-3">
-          <Button variant="outline" className="justify-start">
+          <Button
+            variant="outline"
+            className="justify-start"
+            onClick={() => {
+              setDialogType('cash')
+              setAssetDialogOpen(true)
+            }}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Add Cash Account
           </Button>
-          <Button variant="outline" className="justify-start">
-            <TrendingUp className="h-4 w-4 mr-2" />
+          <Button
+            variant="outline"
+            className="justify-start"
+            onClick={() => {
+              setDialogType('investment')
+              setAssetDialogOpen(true)
+            }}
+          >
+            <ArrowUpRight className="h-4 w-4 mr-2" />
             Transfer to Investment
           </Button>
-          <Button variant="outline" className="justify-start">
-            <PiggyBank className="h-4 w-4 mr-2" />
+          <Button
+            variant="outline"
+            className="justify-start"
+            onClick={() => {
+              setDialogType('emergency')
+              setAssetDialogOpen(true)
+            }}
+          >
+            <Target className="h-4 w-4 mr-2" />
             Boost Emergency Fund
           </Button>
         </div>
       </Card>
+
+      {/* Asset Form Dialog */}
+      <AssetFormDialog
+        open={assetDialogOpen}
+        onOpenChange={setAssetDialogOpen}
+        defaultType={getDialogConfig().defaultType}
+        title={getDialogConfig().title}
+      />
     </div>
   )
 }

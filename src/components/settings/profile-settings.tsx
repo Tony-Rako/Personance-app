@@ -132,10 +132,19 @@ export function ProfileSettings() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isDirty },
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
+      age: null,
+      occupation: null,
+      householdSize: null,
+      numberOfDependents: null,
+      annualIncomeRange: null,
+      financialExperience: null,
+      riskTolerance: null,
+      investmentTimeHorizon: null,
       preferredCurrency: 'USD',
       notificationsEnabled: true,
       primaryFinancialGoals: [],
@@ -146,20 +155,22 @@ export function ProfileSettings() {
   // Load profile data into form when available
   useEffect(() => {
     if (profile) {
-      setValue('age', profile.age)
-      setValue('occupation', profile.occupation)
-      setValue('householdSize', profile.householdSize)
-      setValue('numberOfDependents', profile.numberOfDependents)
-      setValue('annualIncomeRange', profile.annualIncomeRange)
-      setValue('financialExperience', profile.financialExperience)
-      setValue('riskTolerance', profile.riskTolerance)
-      setValue('investmentTimeHorizon', profile.investmentTimeHorizon)
-      setValue('preferredCurrency', profile.preferredCurrency || 'USD')
-      setValue('notificationsEnabled', profile.notificationsEnabled ?? true)
-      setValue('primaryFinancialGoals', profile.primaryFinancialGoals || [])
-      setValue('financialConcerns', profile.financialConcerns || [])
+      reset({
+        age: profile.age,
+        occupation: profile.occupation,
+        householdSize: profile.householdSize,
+        numberOfDependents: profile.numberOfDependents,
+        annualIncomeRange: profile.annualIncomeRange,
+        financialExperience: profile.financialExperience,
+        riskTolerance: profile.riskTolerance,
+        investmentTimeHorizon: profile.investmentTimeHorizon,
+        preferredCurrency: profile.preferredCurrency || 'USD',
+        notificationsEnabled: profile.notificationsEnabled ?? true,
+        primaryFinancialGoals: profile.primaryFinancialGoals || [],
+        financialConcerns: profile.financialConcerns || [],
+      })
     }
-  }, [profile, setValue])
+  }, [profile, reset])
 
   const onSubmit = async (data: ProfileFormData) => {
     await updateProfile.mutateAsync({

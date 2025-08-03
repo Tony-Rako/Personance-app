@@ -29,7 +29,7 @@ interface BudgetCreateDialogProps {
 }
 
 export default function BudgetCreateDialog({
-  open,
+  open: _open,
   onOpenChange,
 }: BudgetCreateDialogProps) {
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -139,7 +139,7 @@ export default function BudgetCreateDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={true} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center space-x-2">

@@ -54,7 +54,8 @@ Thumbs.db
 tmp/
 temp/
 
-# Package manager
+# Package manager conflicts - use npm only
+yarn.lock
 .yarn/cache
 .yarn/unplugged
 .yarn/build-state.yml

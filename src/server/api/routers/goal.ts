@@ -272,44 +272,65 @@ export const goalRouter = createTRPCRouter({
       },
     })
 
-    // If no passive income goal exists, get monthly expenses to create target
-    if (!passiveIncomeGoal) {
-      const monthlyExpenses = await ctx.prisma.expense.findMany({
-        where: {
-          userId: ctx.session.user.id,
-          isRecurring: true,
-        },
-      })
+    // Get current monthly expenses for target calculation
+    const monthlyExpenses = await ctx.prisma.expense.findMany({
+      where: {
+        userId: ctx.session.user.id,
+        isRecurring: true,
+      },
+    })
 
-      const totalMonthlyExpenses = monthlyExpenses.reduce((sum, expense) => {
-        const amount = parseFloat(expense.amount.toString())
-        // Convert to monthly amount based on frequency
-        switch (expense.frequency) {
-          case 'weekly':
-            return sum + amount * 4.33
-          case 'bi-weekly':
-            return sum + amount * 2.17
-          case 'yearly':
-            return sum + amount / 12
-          default:
-            return sum + amount // monthly
-        }
-      }, 0)
+    const totalMonthlyExpenses = monthlyExpenses.reduce((sum, expense) => {
+      const amount = parseFloat(expense.amount.toString())
+      // Convert to monthly amount based on frequency
+      switch (expense.frequency) {
+        case 'weekly':
+          return sum + amount * 4.33
+        case 'bi-weekly':
+          return sum + amount * 2.17
+        case 'yearly':
+          return sum + amount / 12
+        default:
+          return sum + amount // monthly
+      }
+    }, 0)
 
-      // Create passive income goal with target = monthly expenses
-      if (totalMonthlyExpenses > 0) {
-        passiveIncomeGoal = await ctx.prisma.financialGoal.create({
+    // If goal exists but has wrong target (like 1M default), fix it
+    if (passiveIncomeGoal && totalMonthlyExpenses > 0) {
+      const currentTarget = parseFloat(
+        passiveIncomeGoal.targetAmount.toString()
+      )
+
+      // If target is the old default (1M) or significantly different from monthly expenses
+      if (
+        currentTarget === 1000000 ||
+        Math.abs(currentTarget - totalMonthlyExpenses) >
+          totalMonthlyExpenses * 0.5
+      ) {
+        passiveIncomeGoal = await ctx.prisma.financialGoal.update({
+          where: { id: passiveIncomeGoal.id },
           data: {
-            name: 'Escape the Rat Race - Passive Income Goal',
-            type: 'RETIREMENT', // Using RETIREMENT as closest match
             targetAmount: totalMonthlyExpenses,
-            currentAmount: 0,
             description:
-              'Achieve financial freedom by generating passive income equal to monthly expenses',
-            userId: ctx.session.user.id,
+              'Generate passive income equal to your monthly expenses to achieve financial freedom and escape the traditional 9-5 work cycle.',
           },
         })
       }
+    }
+
+    // If no passive income goal exists, create one
+    if (!passiveIncomeGoal && totalMonthlyExpenses > 0) {
+      passiveIncomeGoal = await ctx.prisma.financialGoal.create({
+        data: {
+          name: 'Escape the Rat Race - Passive Income Goal',
+          type: 'RETIREMENT', // Using RETIREMENT as closest match
+          targetAmount: totalMonthlyExpenses,
+          currentAmount: 0,
+          description:
+            'Achieve financial freedom by generating passive income equal to monthly expenses',
+          userId: ctx.session.user.id,
+        },
+      })
     }
 
     return passiveIncomeGoal

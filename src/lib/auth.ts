@@ -1,8 +1,8 @@
 import { NextAuthOptions } from 'next-auth'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import GoogleProvider from 'next-auth/providers/google'
-import GitHubProvider from 'next-auth/providers/github'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import bcrypt from 'bcrypt'
 import { prisma } from './prisma'
 
 export const authOptions: NextAuthOptions = {
@@ -11,10 +11,6 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    }),
-    GitHubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID || '',
-      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
     }),
     CredentialsProvider({
       name: 'credentials',
@@ -27,35 +23,30 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        // In a real app, you'd verify the password against a hash
-        // For now, we'll create a simple demo user
+        // Find user by email
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         })
 
-        if (user) {
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            image: user.image,
+        // If user exists and has a password, verify it
+        if (user && user.password) {
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          )
+
+          if (isPasswordValid) {
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              image: user.image,
+            }
           }
         }
 
-        // Create new user for demo purposes
-        const newUser = await prisma.user.create({
-          data: {
-            email: credentials.email,
-            name: credentials.email.split('@')[0] || null,
-          },
-        })
-
-        return {
-          id: newUser.id,
-          email: newUser.email,
-          name: newUser.name,
-          image: newUser.image,
-        }
+        // Return null if authentication failed
+        return null
       },
     }),
   ],

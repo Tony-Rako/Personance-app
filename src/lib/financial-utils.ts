@@ -1,18 +1,34 @@
 import { format } from 'date-fns'
+import {
+  getCurrencyConfig,
+  DEFAULT_CURRENCY,
+  type CurrencyConfig,
+} from './currency-config'
 
-// Currency formatting
+// Currency formatting with optional currency parameter
 export const formatCurrency = (
   amount: number,
   options?: {
     showCents?: boolean
     showSign?: boolean
+    currency?: string | CurrencyConfig
   }
 ) => {
-  const { showCents = true, showSign = false } = options || {}
+  const { showCents = true, showSign = false, currency } = options || {}
 
-  const formatter = new Intl.NumberFormat('en-US', {
+  // Determine currency config to use
+  let currencyConfig: CurrencyConfig
+  if (typeof currency === 'string') {
+    currencyConfig = getCurrencyConfig(currency)
+  } else if (currency && typeof currency === 'object') {
+    currencyConfig = currency
+  } else {
+    currencyConfig = getCurrencyConfig(DEFAULT_CURRENCY)
+  }
+
+  const formatter = new Intl.NumberFormat(currencyConfig.locale, {
     style: 'currency',
-    currency: 'USD',
+    currency: currencyConfig.code,
     minimumFractionDigits: showCents ? 2 : 0,
     maximumFractionDigits: showCents ? 2 : 0,
   })

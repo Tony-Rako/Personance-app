@@ -3,8 +3,8 @@
 import BudgetOverview from '@/components/budgeting/budget-overview'
 import BudgetCategories from '@/components/budgeting/budget-categories'
 import { useBudgetSummary } from '@/hooks/use-financial-summary'
+import { useCurrencyFormat } from '@/hooks/use-currency-format'
 import { Card } from '@/components/ui/card'
-import { formatCurrency } from '@/lib/financial-utils'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 
 function BudgetTips() {
@@ -77,6 +77,7 @@ function BudgetTips() {
 }
 
 function SpendingGoals() {
+  const { formatAmount } = useCurrencyFormat()
   // Mock data based on the original app screenshots
   const goals = [
     {
@@ -129,9 +130,9 @@ function SpendingGoals() {
         <h3 className="text-lg font-semibold text-gray-900">
           Budget Categories
         </h3>
-        <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-          + Add Category
-        </button>
+        <p className="text-sm text-gray-500">
+          Create a budget to start adding categories
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -147,8 +148,7 @@ function SpendingGoals() {
               <div className="flex items-center justify-between">
                 <span className="font-medium text-gray-900">{goal.name}</span>
                 <span className="text-sm text-gray-600">
-                  {formatCurrency(goal.spent)} of{' '}
-                  {formatCurrency(goal.allocated)}
+                  {formatAmount(goal.spent)} of {formatAmount(goal.allocated)}
                 </span>
               </div>
 
@@ -164,7 +164,7 @@ function SpendingGoals() {
 
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-500">
-                  {formatCurrency(goal.remaining)} remaining
+                  {formatAmount(goal.remaining)} remaining
                 </span>
                 <span
                   className={`${
@@ -184,9 +184,9 @@ function SpendingGoals() {
       </div>
 
       <div className="mt-6 pt-4 border-t">
-        <button className="w-full text-center text-blue-600 hover:text-blue-700 text-sm font-medium">
-          + Add New Budget Category
-        </button>
+        <div className="text-center text-gray-500 text-sm">
+          Budget categories will be available after creating your first budget
+        </div>
       </div>
     </Card>
   )
